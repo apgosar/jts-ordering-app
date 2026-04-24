@@ -129,25 +129,23 @@ No Docker or container configuration needed — Cloud Run builds from source usi
 - [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) installed and authenticated
 - A GCP project with Cloud Run and Cloud Build APIs enabled
 
-#### One-command deploy
+#### Deployment command used
 
-```bash
-gcloud run deploy jts-ordering-app \
-  --source . \
-  --allow-unauthenticated \
-  --region asia-south1 \
-  --set-env-vars="NODE_ENV=production,USE_MOCK_DATA=true,ADMIN_PASSWORD=your_admin_password" \
-  --memory 512Mi \
-  --cpu 1 \
-  --project YOUR_PROJECT_ID
+This is the exact flow used to deploy from source while reading production env values from `.env` and forcing Google Sheets mode (`USE_MOCK_DATA=false`).
+
+1) Generate env vars file from `.env` (PowerShell):
+
+```powershell
+$envMap=@{}; Get-Content .env | ForEach-Object { $line=$_.Trim(); if($line -and -not $line.StartsWith('#') -and $line.Contains('=')){ $idx=$line.IndexOf('='); $k=$line.Substring(0,$idx).Trim(); $v=$line.Substring($idx+1).Trim(); if($v.StartsWith('"') -and $v.EndsWith('"')){ $v=$v.Substring(1,$v.Length-2) }; $envMap[$k]=$v } }; $sid=$envMap['SPREADSHEET_ID']; if($sid -match '/d/([a-zA-Z0-9-_]+)'){ $sid=$Matches[1] } elseif($sid -match '^d/([a-zA-Z0-9-_]+)$'){ $sid=$Matches[1] }; $envMap['SPREADSHEET_ID']=$sid; $envMap['USE_MOCK_DATA']='false'; $envMap['NODE_ENV']='production'; if(-not $envMap.ContainsKey('ADMIN_PASSWORD') -or [string]::IsNullOrWhiteSpace($envMap['ADMIN_PASSWORD'])){ $envMap['ADMIN_PASSWORD']='admin' }; $target = Join-Path $env:TEMP 'jts-ordering-cloudrun-env.yaml'; $keys = @('NODE_ENV','USE_MOCK_DATA','ADMIN_PASSWORD','SPREADSHEET_ID','GOOGLE_SERVICE_ACCOUNT_EMAIL','GOOGLE_PRIVATE_KEY'); $lines = @(); foreach($k in $keys){ $value = if($envMap.ContainsKey($k)) { [string]$envMap[$k] } else { '' }; $safe = $value -replace "'","''"; $lines += "${k}: '$safe'" }; Set-Content -Path $target -Value ($lines -join "`n") -NoNewline; Write-Output "ENV_FILE=$target"
 ```
 
-Replace `YOUR_PROJECT_ID` and `ADMIN_PASSWORD` with your values. On the first run, Cloud Run will prompt to create an Artifact Registry repository — type `Y` to confirm.
+2) Deploy to Cloud Run using the generated env file:
 
-> **Google Sheets integration:** Replace `USE_MOCK_DATA=true` with `USE_MOCK_DATA=false` and append:
-> ```
-> ,GOOGLE_SERVICE_ACCOUNT_EMAIL=your-sa@project.iam.gserviceaccount.com,GOOGLE_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...",SPREADSHEET_ID=your_id
-> ```
+```powershell
+gcloud run deploy jts-ordering-app --source . --allow-unauthenticated --region asia-south1 --memory 512Mi --cpu 1 --project jts-ordering-app --env-vars-file "$target"
+```
+
+On the first run, Cloud Run may prompt to create an Artifact Registry repository. Confirm with `Y`.
 
 #### Subsequent deploys
 
