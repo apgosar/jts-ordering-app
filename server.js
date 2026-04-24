@@ -30,33 +30,40 @@ const adminLimiter = rateLimit({
 // ─── Mock data for local dev without Google Sheets ───────────────────────────
 const MOCK_MENU = [
   {
-    section: 'Breakfast',
+    section: 'Wafers',
+    packageInfo: 'Pkg. 200gm',
     items: [
-      { name: 'Poha', description: 'Traditional flattened rice with peanuts & spices', price: 50 },
-      { name: 'Upma', description: 'South Indian semolina porridge', price: 45 },
-      { name: 'Idli Sambar', description: '3 idlis with sambar & chutney', price: 60 },
+      { name: 'Tikhi Wafers', description: 'Spicy crispy banana wafer chips', price: 100 },
+      { name: 'Mari Wafers', description: 'Pepper-flavoured crispy wafer chips', price: 100 },
+      { name: 'Yellow Wafers', description: 'Lightly salted yellow wafer chips', price: 120 },
     ],
   },
   {
-    section: 'Lunch',
+    section: 'Namkeen',
+    packageInfo: 'Pkg. 250gm',
     items: [
-      { name: 'Dal Rice', description: 'Yellow dal with steamed rice', price: 90 },
-      { name: 'Roti Dal', description: '3 rotis with mixed dal', price: 85 },
-      { name: 'Thali', description: 'Full thali – roti, rice, dal, sabzi, salad', price: 130 },
+      { name: 'Bhavnagari', description: 'Thick crispy sev from Bhavnagar', price: 90 },
+      { name: 'Papadi', description: 'Crispy fried flat crackers', price: 90 },
+      { name: 'Makhaniya Gathiya', description: 'Butter-smooth soft gathiya', price: 90 },
+      { name: 'Sev Bundi', description: 'Fine sev with crispy boondi mix', price: 90 },
+      { name: 'Ratlami Sev', description: 'Spicy sev from Ratlam', price: 90 },
+      { name: 'Nadiyadi Bhusu', description: 'Light crunchy Nadiyad-style namkeen', price: 90 },
+      { name: 'Medium Sev', description: 'Classic medium-thick golden sev', price: 90 },
+      { name: 'Barik Sev', description: 'Fine thin crispy sev', price: 90 },
+      { name: 'Moong Dal', description: 'Crispy fried whole moong dal', price: 90 },
+      { name: 'Chana Dal', description: 'Crunchy fried chana dal with spices', price: 90 },
+      { name: 'Farsi Puri', description: 'Crispy spiced Gujarati farsi puri', price: 90 },
     ],
   },
   {
-    section: 'Dinner',
+    section: 'Sweet',
+    packageInfo: 'Pkg. 250gm',
     items: [
-      { name: 'Khichdi', description: 'Comforting moong dal khichdi with ghee', price: 80 },
-      { name: 'Roti Sabzi', description: '3 rotis with seasonal vegetable curry', price: 90 },
-    ],
-  },
-  {
-    section: 'Snacks',
-    items: [
-      { name: 'Dhokla', description: 'Steamed gram flour snack (4 pcs)', price: 40 },
-      { name: 'Khandvi', description: 'Rolled gram flour bites (8 pcs)', price: 45 },
+      { name: 'Sukhdi (Gol Papdi)', description: 'Traditional wheat flour & jaggery sweet', price: 125 },
+      { name: 'Mithi Bundi', description: 'Sweet boondi in light sugar syrup', price: 125 },
+      { name: 'Mohanthal', description: 'Rich besan fudge with saffron & cardamom', price: 130 },
+      { name: 'Churma Laddu', description: 'Classic Gujarati coarse wheat flour laddu', price: 130 },
+      { name: 'Besan Laddu', description: 'Soft roasted gram flour balls with ghee', price: 130 },
     ],
   },
 ];
@@ -126,18 +133,20 @@ app.get('/api/menu', async (req, res) => {
     const sectionsMap = {};
 
     rows.forEach(row => {
-      const [section, name, description, price] = row;
+      // Column E (index 4) is optional packageInfo per section
+      const [section, name, description, price, packageInfo] = row;
       if (!section || !name) return;
-      if (!sectionsMap[section]) sectionsMap[section] = [];
-      sectionsMap[section].push({
+      if (!sectionsMap[section]) sectionsMap[section] = { items: [], packageInfo: (packageInfo || '').trim() };
+      sectionsMap[section].items.push({
         name: name.trim(),
         description: (description || '').trim(),
         price: parseFloat(price) || 0,
       });
     });
 
-    const menu = Object.entries(sectionsMap).map(([section, items]) => ({
+    const menu = Object.entries(sectionsMap).map(([section, { items, packageInfo }]) => ({
       section,
+      packageInfo: packageInfo || '',
       items,
     }));
 

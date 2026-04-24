@@ -4,21 +4,20 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50:  '#fff7ed',
-          100: '#ffedd5',
-          200: '#fed7aa',
-          300: '#fdba74',
-          400: '#fb923c',
-          500: '#f97316',
-          600: '#ea580c',
-          700: '#c2410c',
-          800: '#9a3412',
-          900: '#7c2d12',
+        jts: {
+          red:    '#C62828',
+          crimson:'#B71C1C',
+          navy:   '#1A237E',
+          gold:   '#F9A825',
+          amber:  '#F57F17',
+          cream:  '#FFF8F0',
+          lcream: '#FFFDF9',
         },
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans:   ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        title:  ['Oswald', 'Impact', 'sans-serif'],
+        script: ['"Dancing Script"', 'cursive'],
       },
     },
   },

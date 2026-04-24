@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getAdminOrders, updateOrderStatus } from '../services/api';
+import JtsLogo from './JtsLogo';
 
 const STATUS_COLORS = {
   Pending: 'bg-yellow-100 text-yellow-800',
@@ -31,10 +32,8 @@ function LoginScreen({ onLogin, authError }) {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-md border border-gray-100 p-6">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 bg-orange-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl mx-auto mb-3">
-            JTS
-          </div>
-          <h1 className="font-bold text-gray-900 text-lg">Admin Panel</h1>
+          <JtsLogo className="w-16 h-16 mx-auto mb-3" />
+          <h1 className="font-bold text-gray-900 text-lg" style={{ fontFamily: "'Oswald', sans-serif" }}>Admin Panel</h1>
           <p className="text-gray-500 text-sm mt-1">Enter the admin password to continue</p>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -43,12 +42,12 @@ function LoginScreen({ onLogin, authError }) {
             value={password}
             onChange={e => { setPassword(e.target.value); setLocalError(''); }}
             placeholder="Admin password"
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-jts-red transition"
           />
           {displayError && <p className="text-xs text-red-600 -mt-2">{displayError}</p>}
           <button
             type="submit"
-            className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition"
+            className="w-full py-3 bg-jts-red hover:bg-jts-crimson text-white font-bold rounded-xl transition"
           >
             Login
           </button>
@@ -70,7 +69,7 @@ function OrderModal({ order, onClose }) {
           <div className="flex justify-between items-start mb-4">
             <div>
               <p className="text-xs text-gray-500">Order ID</p>
-              <p className="font-black text-orange-600 text-lg tracking-widest">{order.orderId}</p>
+              <p className="font-black text-jts-red text-lg tracking-widest">{order.orderId}</p>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition text-gray-500">✕</button>
           </div>
@@ -108,7 +107,7 @@ function OrderModal({ order, onClose }) {
               </div>
               <div className="border-t border-gray-100 mt-2 pt-2 flex justify-between font-bold text-sm">
                 <span>Total</span>
-                <span className="text-orange-600">₹{order.total.toLocaleString('en-IN')}</span>
+                <span className="text-jts-red">₹{order.total.toLocaleString('en-IN')}</span>
               </div>
             </section>
           </div>
@@ -123,7 +122,7 @@ function OrderRow({ order, selected, onSelect, onClick }) {
   return (
     <div
       className={`bg-white rounded-xl border p-3 flex items-start gap-3 transition cursor-pointer
-        ${selected ? 'border-orange-400 bg-orange-50' : 'border-gray-100 hover:border-orange-200'}`}
+        ${selected ? 'border-jts-red bg-jts-cream' : 'border-gray-100 hover:border-red-200'}`}
       onClick={onClick}
     >
       {/* Checkbox */}
@@ -132,11 +131,11 @@ function OrderRow({ order, selected, onSelect, onClick }) {
         checked={selected}
         onChange={e => { e.stopPropagation(); onSelect(); }}
         onClick={e => e.stopPropagation()}
-        className="mt-1 w-4 h-4 accent-orange-500 flex-shrink-0"
+        className="mt-1 w-4 h-4 accent-jts-red flex-shrink-0"
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <span className="font-bold text-orange-600 text-xs tracking-widest">{order.orderId}</span>
+          <span className="font-bold text-jts-red text-xs tracking-widest">{order.orderId}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-600'}`}>
             {order.status}
           </span>
@@ -316,9 +315,9 @@ Status: ${o.status}`;
       <header className="sticky top-0 z-40 bg-white shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">JTS</div>
+            <JtsLogo className="w-9 h-9 flex-shrink-0" />
             <div>
-              <h1 className="font-bold text-gray-900 text-sm leading-tight">Admin Panel</h1>
+              <h1 className="font-bold text-gray-900 text-sm leading-tight" style={{ fontFamily: "'Oswald', sans-serif" }}>Admin Panel</h1>
               <p className="text-xs text-gray-500">{orders.length} orders</p>
             </div>
           </div>
@@ -343,7 +342,7 @@ Status: ${o.status}`;
             <p className="text-xs text-gray-500 mt-0.5">Pending</p>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 p-3 text-center">
-            <p className="text-lg font-black text-orange-600">₹{totalRevenue.toLocaleString('en-IN')}</p>
+            <p className="text-lg font-black text-jts-red">₹{totalRevenue.toLocaleString('en-IN')}</p>
             <p className="text-xs text-gray-500 mt-0.5">Revenue</p>
           </div>
         </div>
@@ -356,7 +355,7 @@ Status: ${o.status}`;
               type="date"
               value={filterDate}
               onChange={e => setFilterDate(e.target.value)}
-              className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+              className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jts-red transition"
             />
           </div>
           <div className="flex-1 min-w-[140px]">
@@ -364,7 +363,7 @@ Status: ${o.status}`;
             <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition bg-white"
+              className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jts-red transition bg-white"
             >
               <option value="">All Statuses</option>
               {STATUS_FLOW.map(s => <option key={s} value={s}>{s}</option>)}
@@ -379,7 +378,7 @@ Status: ${o.status}`;
                 setSortField(f);
                 setSortDir(d);
               }}
-              className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition bg-white"
+              className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jts-red transition bg-white"
             >
               <option value="date:desc">Date (Newest First)</option>
               <option value="date:asc">Date (Oldest First)</option>
@@ -401,8 +400,8 @@ Status: ${o.status}`;
 
         {/* Bulk actions */}
         {selected.size > 0 && (
-          <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-orange-700 flex-1 min-w-max">
+          <div className="bg-jts-cream border border-red-200 rounded-xl p-3 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-jts-red flex-1 min-w-max">
               {selected.size} selected
             </span>
             <button
@@ -419,7 +418,7 @@ Status: ${o.status}`;
             </button>
             <button
               onClick={handleShare}
-              className="px-3 py-1.5 text-xs bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition"
+              className="px-3 py-1.5 text-xs bg-jts-red hover:bg-jts-crimson text-white font-semibold rounded-lg transition"
             >
               📤 Share with Vendor
             </button>
@@ -448,7 +447,7 @@ Status: ${o.status}`;
                 type="checkbox"
                 checked={selected.size === sortedOrders.length && sortedOrders.length > 0}
                 onChange={toggleSelectAll}
-                className="w-4 h-4 accent-orange-500"
+                className="w-4 h-4 accent-jts-red"
               />
               <span className="text-xs text-gray-500">Select all ({sortedOrders.length})</span>
             </div>
@@ -478,7 +477,7 @@ Status: ${o.status}`;
 
         {loading && (
           <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-red-200 border-t-jts-red rounded-full animate-spin" />
           </div>
         )}
       </main>

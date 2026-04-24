@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../App';
 import { getMenu } from '../services/api';
 import LoadingSpinner from './LoadingSpinner';
+import JtsLogo from './JtsLogo';
 
 // ─── Quantity Stepper ─────────────────────────────────────────────────────────
 function QuantityStepper({ quantity, onIncrement, onDecrement }) {
@@ -14,18 +15,18 @@ function QuantityStepper({ quantity, onIncrement, onDecrement }) {
         className={`w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold transition-colors
           ${quantity === 0
             ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-            : 'bg-orange-100 text-orange-600 hover:bg-orange-200 active:bg-orange-300'
+            : 'bg-red-100 text-jts-red hover:bg-red-200 active:bg-red-300'
           }`}
         aria-label="Decrease quantity"
       >
         −
       </button>
-      <span className={`w-6 text-center font-semibold text-sm ${quantity > 0 ? 'text-orange-600' : 'text-gray-400'}`}>
+      <span className={`w-6 text-center font-semibold text-sm ${quantity > 0 ? 'text-jts-red' : 'text-gray-400'}`}>
         {quantity}
       </span>
       <button
         onClick={onIncrement}
-        className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold bg-orange-500 text-white hover:bg-orange-600 active:bg-orange-700 transition-colors"
+        className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold bg-jts-red text-white hover:bg-jts-crimson active:bg-red-900 transition-colors"
         aria-label="Increase quantity"
       >
         +
@@ -35,13 +36,13 @@ function QuantityStepper({ quantity, onIncrement, onDecrement }) {
 }
 
 // ─── Menu Item Card ───────────────────────────────────────────────────────────
-function MenuItem({ item, section, quantity, onIncrement, onDecrement }) {
+function MenuItem({ item, quantity, onIncrement, onDecrement }) {
   return (
     <div className={`flex items-start justify-between p-4 rounded-xl transition-colors
-      ${quantity > 0 ? 'bg-orange-50 border border-orange-200' : 'bg-white border border-gray-100'}`}>
+      ${quantity > 0 ? 'bg-jts-cream border border-red-200' : 'bg-white border border-gray-100'}`}>
       <div className="flex-1 min-w-0 pr-3">
         <div className="flex items-center gap-2">
-          {/* Jain green dot indicator */}
+          {/* Jain veg (green) indicator */}
           <span className="flex-shrink-0 w-4 h-4 border-2 border-green-600 rounded-sm flex items-center justify-center">
             <span className="w-2 h-2 rounded-full bg-green-600 block" />
           </span>
@@ -50,9 +51,39 @@ function MenuItem({ item, section, quantity, onIncrement, onDecrement }) {
         {item.description && (
           <p className="text-xs text-gray-500 mt-1 ml-6 leading-snug">{item.description}</p>
         )}
-        <p className="text-sm font-bold text-orange-600 mt-2 ml-6">₹{item.price}</p>
+        <p className="text-sm font-bold text-jts-red mt-2 ml-6">₹{item.price}/-</p>
       </div>
       <QuantityStepper quantity={quantity} onIncrement={onIncrement} onDecrement={onDecrement} />
+    </div>
+  );
+}
+
+// ─── Section Header ───────────────────────────────────────────────────────────
+function SectionHeader({ name, packageInfo, count }) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-3">
+        {/* Red badge with cursive font – matches the poster */}
+        <div className="bg-jts-red rounded-lg px-4 py-1 shadow-sm">
+          <span
+            className="text-white font-bold text-xl"
+            style={{ fontFamily: "'Dancing Script', cursive" }}
+          >
+            {name}
+          </span>
+        </div>
+        {packageInfo && (
+          <span
+            className="text-xs font-bold text-jts-navy uppercase tracking-wide"
+            style={{ fontFamily: "'Poppins', sans-serif" }}
+          >
+            {packageInfo}
+          </span>
+        )}
+      </div>
+      <span className="text-xs bg-red-50 text-jts-red px-2 py-0.5 rounded-full font-medium border border-red-100">
+        {count} {count === 1 ? 'item' : 'items'}
+      </span>
     </div>
   );
 }
@@ -61,13 +92,13 @@ function MenuItem({ item, section, quantity, onIncrement, onDecrement }) {
 function CartBar({ cartCount, cartTotal, onViewOrder }) {
   if (cartCount === 0) return null;
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-gray-100 to-transparent">
+    <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-jts-cream to-transparent">
       <button
         onClick={onViewOrder}
-        className="w-full max-w-md mx-auto flex items-center justify-between bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white rounded-2xl px-5 py-4 shadow-lg transition-colors"
+        className="w-full max-w-md mx-auto flex items-center justify-between bg-jts-red hover:bg-jts-crimson active:bg-red-900 text-white rounded-2xl px-5 py-4 shadow-lg transition-colors"
         style={{ display: 'flex' }}
       >
-        <span className="bg-orange-400 rounded-lg px-2 py-0.5 text-sm font-bold">
+        <span className="bg-red-700 rounded-lg px-2 py-0.5 text-sm font-bold">
           {cartCount} {cartCount === 1 ? 'item' : 'items'}
         </span>
         <span className="font-bold text-base">View Order</span>
@@ -112,26 +143,61 @@ export default function MenuPage() {
     cart[`${section}::${itemName}`]?.quantity || 0;
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ paddingBottom: cartCount > 0 ? '100px' : '24px' }}>
-      {/* Header */}
+    <div className="min-h-screen bg-jts-lcream" style={{ paddingBottom: cartCount > 0 ? '100px' : '24px' }}>
+
+      {/* ── Sticky Header ── */}
       <header className="sticky top-0 z-40 bg-white shadow-sm">
-        <div className="max-w-md mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-            JTS
-          </div>
-          <div>
-            <h1 className="font-bold text-gray-900 text-base leading-tight">Jain Tiffin Service</h1>
-            <p className="text-xs text-gray-500">Fresh • Wholesome • Jain</p>
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+          <JtsLogo className="w-12 h-12 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            {/* Brand name – matches poster typography */}
+            <div className="flex items-baseline gap-0.5 leading-none">
+              <span
+                className="text-jts-red font-bold text-2xl"
+                style={{ fontFamily: "'Oswald', Impact, sans-serif" }}
+              >
+                J
+              </span>
+              <span
+                className="text-gray-900 font-bold text-lg"
+                style={{ fontFamily: "'Oswald', Impact, sans-serif" }}
+              >
+                AIN TIFFIN
+              </span>
+            </div>
+            <div
+              className="text-gray-800 font-semibold text-sm tracking-widest"
+              style={{ fontFamily: "'Oswald', Impact, sans-serif" }}
+            >
+              SERVICE
+            </div>
+            <div className="text-xs text-jts-navy font-semibold tracking-wide">
+              BY KEYUR SHAH
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Content */}
-      <main className="max-w-md mx-auto px-4 py-4">
-        {loading && <LoadingSpinner message="Loading today's menu…" />}
+      {/* ── Hero tagline banner ── */}
+      <div className="bg-jts-navy">
+        <p className="max-w-md mx-auto text-center text-white text-xs font-semibold py-2 px-4 tracking-wide uppercase">
+          We make sure you eat healthy and stay healthy
+        </p>
+      </div>
+
+      {/* ── Delivery info strip ── */}
+      <div className="bg-jts-gold">
+        <p className="max-w-md mx-auto text-center text-gray-900 text-xs font-medium py-1.5 px-4">
+          🛵 Free delivery on orders above 5 packets · ₹30 charge for below 5 packets
+        </p>
+      </div>
+
+      {/* ── Content ── */}
+      <main className="max-w-md mx-auto px-4 py-5">
+        {loading && <LoadingSpinner message="Loading menu…" />}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-jts-red">
             {error}
           </div>
         )}
@@ -143,14 +209,9 @@ export default function MenuPage() {
           </div>
         )}
 
-        {!loading && !error && menu.map(({ section, items }) => (
-          <section key={section} className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="font-bold text-gray-800 text-base">{section}</h2>
-              <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">
-                {items.length} {items.length === 1 ? 'item' : 'items'}
-              </span>
-            </div>
+        {!loading && !error && menu.map(({ section, packageInfo, items }) => (
+          <section key={section} className="mb-7">
+            <SectionHeader name={section} packageInfo={packageInfo} count={items.length} />
             <div className="flex flex-col gap-3">
               {items.map(item => (
                 <MenuItem
@@ -165,6 +226,22 @@ export default function MenuPage() {
             </div>
           </section>
         ))}
+
+        {/* ── Contact footer ── */}
+        {!loading && !error && menu.length > 0 && (
+          <div className="mt-4 bg-jts-navy rounded-2xl p-4 text-center">
+            <p className="text-white font-bold text-base" style={{ fontFamily: "'Oswald', sans-serif" }}>
+              Keyur Shah
+            </p>
+            <a
+              href="tel:+918779084488"
+              className="text-jts-gold font-semibold text-lg tracking-wide hover:underline"
+            >
+              📞 87790 84488
+            </a>
+            <p className="text-white text-xs mt-1 opacity-75">Only in Borivali · Free delivery on 5+ packets</p>
+          </div>
+        )}
       </main>
 
       {/* Floating cart bar */}
@@ -176,3 +253,4 @@ export default function MenuPage() {
     </div>
   );
 }
+

@@ -28,7 +28,7 @@ function TextInput({ id, value, onChange, placeholder, type = 'text', maxLength,
       placeholder={placeholder}
       maxLength={maxLength}
       className="w-full px-3 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400
-        focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition"
+        focus:outline-none focus:ring-2 focus:ring-jts-red focus:border-transparent transition"
     />
   );
 }
@@ -80,7 +80,7 @@ export default function CheckoutPage() {
         <p className="text-gray-600 font-medium text-center">Your cart is empty. Add items from the menu first.</p>
         <button
           onClick={() => navigate('/')}
-          className="mt-2 px-6 py-3 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 transition"
+          className="mt-2 px-6 py-3 bg-jts-red text-white font-semibold rounded-xl hover:bg-jts-crimson transition"
         >
           Browse Menu
         </button>
@@ -189,7 +189,7 @@ export default function CheckoutPage() {
           </div>
           <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
             <span className="font-bold text-gray-700">Total</span>
-            <span className="font-extrabold text-orange-600 text-xl">
+            <span className="font-extrabold text-jts-red text-xl">
               ₹{cartTotal.toLocaleString('en-IN')}
             </span>
           </div>
@@ -296,8 +296,8 @@ export default function CheckoutPage() {
             disabled={submitting}
             className={`w-full py-4 rounded-2xl font-bold text-white text-base transition
               ${submitting
-                ? 'bg-orange-300 cursor-not-allowed'
-                : 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700 shadow-md'
+                ? 'bg-red-300 cursor-not-allowed'
+                : 'bg-jts-red hover:bg-jts-crimson active:bg-red-900 shadow-md'
               }`}
           >
             {submitting ? 'Placing Order…' : '🛍️ Place Order'}

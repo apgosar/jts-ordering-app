@@ -7,8 +7,8 @@ body {
   padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #fafafa;
-  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  background-color: #FFFDF9;
+  font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Remove tap highlight on mobile */
@@ -23,5 +23,5 @@ html {
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: #f1f1f1; }
-::-webkit-scrollbar-thumb { background: #f97316; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: #C62828; border-radius: 2px; }
 
