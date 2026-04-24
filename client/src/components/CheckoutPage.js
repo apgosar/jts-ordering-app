@@ -347,7 +347,7 @@ export default function CheckoutPage() {
                   id="street"
                   value={form.street}
                   onChange={handleChange('street')}
-                  placeholder="e.g. MG Road"
+                  placeholder="e.g. S.V.Road"
                 />
               </Field>
 
@@ -365,7 +365,7 @@ export default function CheckoutPage() {
                   id="locality"
                   value={form.locality}
                   onChange={handleChange('locality')}
-                  placeholder="e.g. Andheri West"
+                  placeholder="e.g. Borivali West"
                 />
               </Field>
 

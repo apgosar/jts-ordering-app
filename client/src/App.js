@@ -34,12 +34,17 @@ function App() {
       const key = `${section}::${itemName}`;
       const current = prev[key]?.quantity || 0;
       const newQty = current + delta;
+      const menuItem = findMenuItem(section, itemName);
+
+      if (delta > 0 && menuItem?.outOfStock) {
+        return prev;
+      }
+
       if (newQty <= 0) {
         const { [key]: _removed, ...rest } = prev;
         return rest;
       }
       const existing = prev[key];
-      const menuItem = findMenuItem(section, itemName);
       const baseItem = existing || (menuItem ? { ...menuItem, section } : { name: itemName, section, price: 0 });
 
       return {

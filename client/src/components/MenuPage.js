@@ -5,8 +5,12 @@ import { getMenu } from '../services/api';
 import LoadingSpinner from './LoadingSpinner';
 import JtsLogo from './JtsLogo';
 
+function getSectionId(sectionName) {
+  return `menu-section-${sectionName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+}
+
 // ─── Quantity Stepper ─────────────────────────────────────────────────────────
-function QuantityStepper({ quantity, onIncrement, onDecrement }) {
+function QuantityStepper({ quantity, onIncrement, onDecrement, disableIncrement = false }) {
   return (
     <div className="flex items-center gap-1">
       <button
@@ -26,7 +30,12 @@ function QuantityStepper({ quantity, onIncrement, onDecrement }) {
       </span>
       <button
         onClick={onIncrement}
-        className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold bg-jts-red text-white hover:bg-jts-crimson active:bg-red-900 transition-colors"
+        disabled={disableIncrement}
+        className={`w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold transition-colors ${
+          disableIncrement
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'bg-jts-red text-white hover:bg-jts-crimson active:bg-red-900'
+        }`}
         aria-label="Increase quantity"
       >
         +
@@ -37,23 +46,31 @@ function QuantityStepper({ quantity, onIncrement, onDecrement }) {
 
 // ─── Menu Item Card ───────────────────────────────────────────────────────────
 function MenuItem({ item, quantity, onIncrement, onDecrement }) {
+  const isOutOfStock = !!item.outOfStock;
+
   return (
     <div className={`flex items-start justify-between p-4 rounded-xl transition-colors
-      ${quantity > 0 ? 'bg-jts-cream border border-red-200' : 'bg-white border border-gray-100'}`}>
+      ${isOutOfStock ? 'bg-gray-100 border border-gray-200 opacity-80' : quantity > 0 ? 'bg-jts-cream border border-red-200' : 'bg-white border border-gray-100'}`}>
       <div className="flex-1 min-w-0 pr-3">
         <div className="flex items-center gap-2">
           {/* Jain veg (green) indicator */}
           <span className="flex-shrink-0 w-4 h-4 border-2 border-green-600 rounded-sm flex items-center justify-center">
             <span className="w-2 h-2 rounded-full bg-green-600 block" />
           </span>
-          <h3 className="font-semibold text-gray-800 text-sm leading-tight">{item.name}</h3>
+          <h3 className={`font-semibold text-sm leading-tight ${isOutOfStock ? 'text-gray-500' : 'text-gray-800'}`}>{item.name}</h3>
         </div>
         {item.description && (
-          <p className="text-xs text-gray-500 mt-1 ml-6 leading-snug">{item.description}</p>
+          <p className={`text-xs mt-1 ml-6 leading-snug ${isOutOfStock ? 'text-gray-400' : 'text-gray-500'}`}>{item.description}</p>
         )}
-        <p className="text-sm font-bold text-jts-red mt-2 ml-6">₹{item.price}/-</p>
+        <p className={`text-sm font-bold mt-2 ml-6 ${isOutOfStock ? 'text-gray-500' : 'text-jts-red'}`}>₹{item.price}/-</p>
+        {isOutOfStock && <p className="text-xs font-bold text-red-600 mt-1 ml-6">Out of Stock</p>}
       </div>
-      <QuantityStepper quantity={quantity} onIncrement={onIncrement} onDecrement={onDecrement} />
+      <QuantityStepper
+        quantity={quantity}
+        onIncrement={onIncrement}
+        onDecrement={onDecrement}
+        disableIncrement={isOutOfStock}
+      />
     </div>
   );
 }
@@ -135,6 +152,46 @@ function CartBar({
   );
 }
 
+function FloatingSectionMenu({ sections, isOpen, onToggle, onSelect, hasCart }) {
+  if (sections.length === 0) return null;
+
+  const bottomOffset = hasCart ? '176px' : '20px';
+  const rightOffset = 'max(1rem, calc(50% - 14rem))';
+
+  return (
+    <div className="fixed z-40 flex flex-col items-end gap-3" style={{ bottom: bottomOffset, right: rightOffset }}>
+      {isOpen && (
+        <div className="w-52 overflow-hidden rounded-2xl border border-red-100 bg-white shadow-xl">
+          <div className="border-b border-red-50 px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-jts-red">
+            Browse Menu
+          </div>
+          <div className="flex max-h-64 flex-col overflow-y-auto py-2">
+            {sections.map(section => (
+              <button
+                key={section}
+                type="button"
+                onClick={() => onSelect(section)}
+                className="px-4 py-3 text-left text-sm font-semibold text-gray-700 transition hover:bg-red-50 hover:text-jts-red"
+              >
+                {section}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="rounded-full bg-jts-red px-5 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-jts-crimson active:bg-red-900"
+        aria-expanded={isOpen}
+        aria-label="Open menu sections"
+      >
+        Menu
+      </button>
+    </div>
+  );
+}
+
 // ─── MenuPage ─────────────────────────────────────────────────────────────────
 export default function MenuPage() {
   const navigate = useNavigate();
@@ -152,6 +209,7 @@ export default function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showFreeDeliveryCelebration, setShowFreeDeliveryCelebration] = useState(false);
+  const [isSectionMenuOpen, setIsSectionMenuOpen] = useState(false);
   const previousCartCount = useRef(cartCount);
 
   useEffect(() => {
@@ -194,6 +252,11 @@ export default function MenuPage() {
 
   const getQty = (section, itemName) =>
     cart[`${section}::${itemName}`]?.quantity || 0;
+
+  const handleSectionSelect = (section) => {
+    setIsSectionMenuOpen(false);
+    document.getElementById(getSectionId(section))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <div className="min-h-screen bg-jts-lcream" style={{ paddingBottom: cartCount > 0 ? '160px' : '24px' }}>
@@ -238,13 +301,6 @@ export default function MenuPage() {
         </p>
       </div>
 
-      {/* ── Delivery info strip ── */}
-      <div className="bg-jts-gold">
-        <p className="max-w-md mx-auto text-center text-gray-900 text-xs font-medium py-1.5 px-4">
-          🛵 Free delivery on orders above 5 packets · ₹30 charge for below 5 packets
-        </p>
-      </div>
-
       {/* ── Content ── */}
       <main className="max-w-md mx-auto px-4 py-5">
         {loading && <LoadingSpinner message="Loading menu…" />}
@@ -263,7 +319,7 @@ export default function MenuPage() {
         )}
 
         {!loading && !error && menu.map(({ section, packageInfo, items }) => (
-          <section key={section} className="mb-7">
+          <section key={section} id={getSectionId(section)} className="mb-7 scroll-mt-24">
             <SectionHeader name={section} packageInfo={packageInfo} count={items.length} />
             <div className="flex flex-col gap-3">
               {items.map(item => (
@@ -292,10 +348,22 @@ export default function MenuPage() {
             >
               📞 87790 84488
             </a>
-            <p className="text-white text-xs mt-1 opacity-75">Only in Borivali · Free delivery on 5+ packets</p>
+            <p className="text-white text-xs mt-1 opacity-75">Only in Borivali</p>
+            <p className="text-jts-gold text-xs mt-2 font-medium">
+              <span className="block">🛵 Free delivery on orders above 5 packets</span>
+              <span className="block mt-0.5">₹30 charge for below 5 packets</span>
+            </p>
           </div>
         )}
       </main>
+
+      <FloatingSectionMenu
+        sections={menu.map(({ section }) => section)}
+        isOpen={isSectionMenuOpen}
+        onToggle={() => setIsSectionMenuOpen(prev => !prev)}
+        onSelect={handleSectionSelect}
+        hasCart={cartCount > 0}
+      />
 
       {/* Floating cart bar */}
       <CartBar
@@ -304,7 +372,10 @@ export default function MenuPage() {
         qualifiesForFreeDelivery={qualifiesForFreeDelivery}
         itemsToFreeDelivery={itemsToFreeDelivery}
         showFreeDeliveryCelebration={showFreeDeliveryCelebration}
-        onViewOrder={() => navigate('/checkout')}
+        onViewOrder={() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          navigate('/checkout');
+        }}
       />
     </div>
   );

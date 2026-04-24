@@ -93,6 +93,11 @@ function validateItems(items) {
   );
 }
 
+function isOutOfStockValue(value) {
+  const normalized = (value || '').toString().trim().toLowerCase();
+  return normalized === 'yes' || normalized === 'true' || normalized === '1' || normalized === 'out of stock';
+}
+
 // ─── Google Sheets helper ─────────────────────────────────────────────────────
 function getSheetsClient() {
   const credentials = {
@@ -126,21 +131,28 @@ app.get('/api/menu', async (req, res) => {
     const sheets = getSheetsClient();
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Menu!A2:D',
+      range: 'Menu!A2:F',
     });
 
     const rows = response.data.values || [];
     const sectionsMap = {};
 
     rows.forEach(row => {
-      // Column E (index 4) is optional packageInfo per section
-      const [section, name, description, price, packageInfo] = row;
+      // Column E (index 4) is packageInfo per section, column F (index 5) is out-of-stock per item
+      const [section, name, description, price, packageInfo, outOfStockRaw] = row;
       if (!section || !name) return;
-      if (!sectionsMap[section]) sectionsMap[section] = { items: [], packageInfo: (packageInfo || '').trim() };
+      if (!sectionsMap[section]) sectionsMap[section] = { items: [], packageInfo: '' };
+
+      const trimmedPackageInfo = (packageInfo || '').trim();
+      if (!sectionsMap[section].packageInfo && trimmedPackageInfo) {
+        sectionsMap[section].packageInfo = trimmedPackageInfo;
+      }
+
       sectionsMap[section].items.push({
         name: name.trim(),
         description: (description || '').trim(),
         price: parseFloat(price) || 0,
+        outOfStock: isOutOfStockValue(outOfStockRaw),
       });
     });
 
