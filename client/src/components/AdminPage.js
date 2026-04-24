@@ -177,12 +177,20 @@ export default function AdminPage() {
   // Action feedback
   const [actionMsg, setActionMsg] = useState('');
 
+  // Convert HTML date input (YYYY-MM-DD) to stored format (DD/MM/YYYY)
+  const convertDateFormat = (dateStr) => {
+    if (!dateStr) return undefined;
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
   const fetchOrders = useCallback(async (pass) => {
     setLoading(true);
     setError('');
     try {
+      const formattedDate = convertDateFormat(filterDate);
       const res = await getAdminOrders(
-        { date: filterDate || undefined, status: filterStatus || undefined },
+        { date: formattedDate || undefined, status: filterStatus || undefined },
         pass || adminPassword
       );
       setOrders(res.data.orders || []);

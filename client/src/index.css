@@ -25,3 +25,55 @@ html {
 ::-webkit-scrollbar-track { background: #f1f1f1; }
 ::-webkit-scrollbar-thumb { background: #C62828; border-radius: 2px; }
 
+@keyframes free-delivery-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.04) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes free-delivery-spark {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.4);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-18px) scale(1.2);
+  }
+}
+
+.free-delivery-burst {
+  position: relative;
+  animation: free-delivery-burst 450ms ease-out;
+}
+
+.free-delivery-spark {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #facc15 0%, #f59e0b 70%, transparent 72%);
+  animation: free-delivery-spark 950ms ease-out 2;
+}
+
+.free-delivery-spark-left {
+  left: 16px;
+}
+
+.free-delivery-spark-right {
+  right: 16px;
+}
+

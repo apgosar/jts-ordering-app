@@ -121,6 +121,40 @@ The Express server will serve the built React app.
 
 ---
 
+### 6. Deploy to Google Cloud Run
+
+No Docker or container configuration needed — Cloud Run builds from source using buildpacks.
+
+#### Prerequisites
+- [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) installed and authenticated
+- A GCP project with Cloud Run and Cloud Build APIs enabled
+
+#### One-command deploy
+
+```bash
+gcloud run deploy jts-ordering-app \
+  --source . \
+  --allow-unauthenticated \
+  --region asia-south1 \
+  --set-env-vars="NODE_ENV=production,USE_MOCK_DATA=true,ADMIN_PASSWORD=your_admin_password" \
+  --memory 512Mi \
+  --cpu 1 \
+  --project YOUR_PROJECT_ID
+```
+
+Replace `YOUR_PROJECT_ID` and `ADMIN_PASSWORD` with your values. On the first run, Cloud Run will prompt to create an Artifact Registry repository — type `Y` to confirm.
+
+> **Google Sheets integration:** Replace `USE_MOCK_DATA=true` with `USE_MOCK_DATA=false` and append:
+> ```
+> ,GOOGLE_SERVICE_ACCOUNT_EMAIL=your-sa@project.iam.gserviceaccount.com,GOOGLE_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...",SPREADSHEET_ID=your_id
+> ```
+
+#### Subsequent deploys
+
+Same command — Cloud Run creates a new revision and routes 100% of traffic to it automatically.
+
+---
+
 ## App Overview
 
 ### Customer Flow

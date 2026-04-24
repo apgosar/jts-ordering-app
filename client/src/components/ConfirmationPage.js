@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../App';
 import JtsLogo from './JtsLogo';
@@ -6,6 +6,10 @@ import JtsLogo from './JtsLogo';
 export default function ConfirmationPage() {
   const navigate = useNavigate();
   const { lastOrder } = useCart();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   if (!lastOrder) {
     return (
@@ -22,7 +26,7 @@ export default function ConfirmationPage() {
     );
   }
 
-  const { orderId, items, total, customer } = lastOrder;
+  const { orderId, items, subtotal, deliveryCharge, total, customer } = lastOrder;
 
   return (
     <div className="min-h-screen bg-jts-cream flex flex-col">
@@ -62,6 +66,21 @@ export default function ConfirmationPage() {
                 </span>
               </div>
             ))}
+            <div className="border-t border-gray-100 pt-2 mt-1 flex justify-between text-gray-700">
+              <span>Subtotal</span>
+              <span className="font-semibold text-gray-800">₹{(subtotal ?? total).toLocaleString('en-IN')}/-</span>
+            </div>
+            <div className="flex justify-between text-gray-700">
+              <span>Delivery Charges</span>
+              {deliveryCharge > 0 ? (
+                <span className="font-semibold text-gray-800">₹{deliveryCharge.toLocaleString('en-IN')}/-</span>
+              ) : (
+                <span className="font-semibold text-green-600 flex items-center gap-2">
+                  <span className="text-gray-400 line-through">₹30/-</span>
+                  <span>FREE</span>
+                </span>
+              )}
+            </div>
             <div className="border-t border-gray-100 pt-2 flex justify-between font-bold mt-1">
               <span>Total</span>
               <span className="text-jts-red">₹{total.toLocaleString('en-IN')}/-</span>

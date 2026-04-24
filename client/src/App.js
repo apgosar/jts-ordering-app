@@ -8,6 +8,9 @@ import AdminPage from './components/AdminPage';
 // ─── Cart Context ─────────────────────────────────────────────────────────────
 export const CartContext = createContext(null);
 
+export const FREE_DELIVERY_THRESHOLD = 5;
+export const DELIVERY_CHARGE = 30;
+
 export function useCart() {
   return useContext(CartContext);
 }
@@ -19,6 +22,12 @@ function App() {
   const [menu, setMenu] = useState([]);
   const [lastOrder, setLastOrder] = useState(null);
 
+  const findMenuItem = (section, itemName) => {
+    const sectionData = menu.find(s => s.section === section);
+    if (!sectionData) return null;
+    return sectionData.items.find(item => item.name === itemName) || null;
+  };
+
   /** Increment or decrement item quantity; removes item when qty reaches 0 */
   const updateQuantity = (section, itemName, delta) => {
     setCart(prev => {
@@ -29,7 +38,17 @@ function App() {
         const { [key]: _removed, ...rest } = prev;
         return rest;
       }
-      return { ...prev, [key]: { ...prev[key], quantity: newQty } };
+      const existing = prev[key];
+      const menuItem = findMenuItem(section, itemName);
+      const baseItem = existing || (menuItem ? { ...menuItem, section } : { name: itemName, section, price: 0 });
+
+      return {
+        ...prev,
+        [key]: {
+          ...baseItem,
+          quantity: newQty,
+        },
+      };
     });
   };
 
@@ -49,8 +68,12 @@ function App() {
   const clearCart = () => setCart({});
 
   const cartItems = Object.values(cart).filter(i => i.quantity > 0);
-  const cartTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+  const cartTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const qualifiesForFreeDelivery = cartCount >= FREE_DELIVERY_THRESHOLD;
+  const deliveryCharge = cartCount === 0 || qualifiesForFreeDelivery ? 0 : DELIVERY_CHARGE;
+  const itemsToFreeDelivery = Math.max(0, FREE_DELIVERY_THRESHOLD - cartCount);
+  const orderTotal = cartTotal + deliveryCharge;
 
   return (
     <CartContext.Provider
@@ -59,6 +82,10 @@ function App() {
         cartItems,
         cartTotal,
         cartCount,
+        deliveryCharge,
+        orderTotal,
+        qualifiesForFreeDelivery,
+        itemsToFreeDelivery,
         updateQuantity,
         registerItem,
         clearCart,

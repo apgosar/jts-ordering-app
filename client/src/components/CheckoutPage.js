@@ -33,17 +33,43 @@ function TextInput({ id, value, onChange, placeholder, type = 'text', maxLength,
   );
 }
 
-// ─── Order summary row ────────────────────────────────────────────────────────
-function OrderRow({ item }) {
+// ─── Quantity Stepper ─────────────────────────────────────────────────────────
+function QuantityStepper({ quantity, onIncrement, onDecrement }) {
   return (
-    <div className="flex items-start justify-between text-sm">
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={onDecrement}
+        className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold bg-red-100 text-jts-red hover:bg-red-200 active:bg-red-300 transition-colors"
+        aria-label="Decrease quantity"
+      >
+        −
+      </button>
+      <span className="w-6 text-center font-semibold text-sm text-jts-red">{quantity}</span>
+      <button
+        type="button"
+        onClick={onIncrement}
+        className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold bg-jts-red text-white hover:bg-jts-crimson active:bg-red-900 transition-colors"
+        aria-label="Increase quantity"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+// ─── Order summary row ────────────────────────────────────────────────────────
+function OrderRow({ item, onIncrement, onDecrement }) {
+  return (
+    <div className="flex items-start justify-between gap-3 text-sm py-3 first:pt-0 last:pb-0">
       <div className="flex-1 min-w-0">
         <span className="font-medium text-gray-800">{item.name}</span>
         <span className="text-gray-400 text-xs ml-1">({item.section})</span>
+        <p className="text-xs text-gray-500 mt-1">₹{item.price.toLocaleString('en-IN')} each</p>
       </div>
-      <div className="flex items-center gap-4 ml-4 flex-shrink-0">
-        <span className="text-gray-500">×{item.quantity}</span>
-        <span className="font-semibold text-gray-800 w-16 text-right">
+      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+        <QuantityStepper quantity={item.quantity} onIncrement={onIncrement} onDecrement={onDecrement} />
+        <span className="font-semibold text-gray-800 min-w-[72px] text-right">
           ₹{(item.price * item.quantity).toLocaleString('en-IN')}
         </span>
       </div>
@@ -65,12 +91,27 @@ const INITIAL_FORM = {
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { cartItems, cartTotal, clearCart, setLastOrder } = useCart();
+  const {
+    cartItems,
+    cartCount,
+    cartTotal,
+    deliveryCharge,
+    orderTotal,
+    qualifiesForFreeDelivery,
+    itemsToFreeDelivery,
+    updateQuantity,
+    clearCart,
+    setLastOrder,
+  } = useCart();
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
+
+  const freeDeliveryMessage = qualifiesForFreeDelivery
+    ? 'YAY! You have qualified for free delivery!'
+    : `Add ${itemsToFreeDelivery} more ${itemsToFreeDelivery === 1 ? 'item' : 'items'} to qualify for free delivery.`;
 
   // Redirect to menu if cart is empty
   if (cartItems.length === 0 && !submitting) {
@@ -124,6 +165,7 @@ export default function CheckoutPage() {
       return;
     }
 
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setSubmitting(true);
     setServerError('');
     try {
@@ -139,13 +181,16 @@ export default function CheckoutPage() {
           pincode: form.pincode.trim(),
         },
         items: cartItems.map(({ name, section, price, quantity }) => ({ name, section, price, quantity })),
-        total: cartTotal,
+        total: orderTotal,
       });
 
       setLastOrder({
         orderId: res.data.orderId,
         items: cartItems,
-        total: cartTotal,
+        subtotal: cartTotal,
+        deliveryCharge,
+        total: orderTotal,
+        qualifiesForFreeDelivery,
         customer: form,
       });
       clearCart();
@@ -179,18 +224,70 @@ export default function CheckoutPage() {
       <main className="max-w-md mx-auto px-4 py-4 flex flex-col gap-5">
         {/* ── Order Summary ── */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-          <h2 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-            <span>🧾</span> Your Order
-          </h2>
-          <div className="flex flex-col gap-2.5 divide-y divide-gray-50">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="font-bold text-gray-800 flex items-center gap-2">
+              <span>🧾</span> Your Order
+            </h2>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="text-xs font-semibold text-jts-red hover:text-jts-crimson transition"
+            >
+              + Add More Items
+            </button>
+          </div>
+
+          <div className={`mb-4 rounded-2xl border px-4 py-3 ${qualifiesForFreeDelivery ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
+            <p className={`text-sm font-bold ${qualifiesForFreeDelivery ? 'text-green-700' : 'text-amber-800'}`}>
+              {freeDeliveryMessage}
+            </p>
+            {!qualifiesForFreeDelivery && (
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="mt-2 inline-flex items-center rounded-xl bg-white px-3 py-2 text-xs font-semibold text-jts-red shadow-sm hover:bg-red-50 transition"
+              >
+                Add More Items
+              </button>
+            )}
+          </div>
+
+          <div className="mb-4 rounded-xl bg-gray-50 px-4 py-3 flex items-center justify-between text-xs font-medium text-gray-600">
+            <span>{cartCount} {cartCount === 1 ? 'item' : 'items'} in cart</span>
+            <span>Update quantities below</span>
+          </div>
+
+          <div className="flex flex-col divide-y divide-gray-100">
             {cartItems.map(item => (
-              <OrderRow key={`${item.section}::${item.name}`} item={item} />
+              <OrderRow
+                key={`${item.section}::${item.name}`}
+                item={item}
+                onIncrement={() => updateQuantity(item.section, item.name, 1)}
+                onDecrement={() => updateQuantity(item.section, item.name, -1)}
+              />
             ))}
           </div>
           <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
+            <span className="font-medium text-gray-700">Subtotal</span>
+            <span className="font-semibold text-gray-800">
+              ₹{cartTotal.toLocaleString('en-IN')}
+            </span>
+          </div>
+          <div className="mt-2 flex justify-between items-center text-sm">
+            <span className="font-medium text-gray-700">Delivery Charges</span>
+            {qualifiesForFreeDelivery ? (
+              <span className="font-semibold text-green-600 flex items-center gap-2">
+                <span className="text-gray-400 line-through">₹30/-</span>
+                <span>FREE</span>
+              </span>
+            ) : (
+              <span className="font-semibold text-gray-800">₹30/-</span>
+            )}
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
             <span className="font-bold text-gray-700">Total</span>
             <span className="font-extrabold text-jts-red text-xl">
-              ₹{cartTotal.toLocaleString('en-IN')}
+              ₹{orderTotal.toLocaleString('en-IN')}
             </span>
           </div>
         </section>

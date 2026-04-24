@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '../App';
+import { FREE_DELIVERY_THRESHOLD, useCart } from '../App';
 import { getMenu } from '../services/api';
 import LoadingSpinner from './LoadingSpinner';
 import JtsLogo from './JtsLogo';
@@ -89,21 +89,48 @@ function SectionHeader({ name, packageInfo, count }) {
 }
 
 // ─── Floating Cart Bar ────────────────────────────────────────────────────────
-function CartBar({ cartCount, cartTotal, onViewOrder }) {
+function CartBar({
+  cartCount,
+  cartTotal,
+  qualifiesForFreeDelivery,
+  itemsToFreeDelivery,
+  showFreeDeliveryCelebration,
+  onViewOrder,
+}) {
   if (cartCount === 0) return null;
+
+  const freeDeliveryMessage = qualifiesForFreeDelivery
+    ? 'YAY! You have qualified for free delivery!'
+    : `Add ${itemsToFreeDelivery} more ${itemsToFreeDelivery === 1 ? 'item' : 'items'} for free delivery`;
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-jts-cream to-transparent">
-      <button
-        onClick={onViewOrder}
-        className="w-full max-w-md mx-auto flex items-center justify-between bg-jts-red hover:bg-jts-crimson active:bg-red-900 text-white rounded-2xl px-5 py-4 shadow-lg transition-colors"
-        style={{ display: 'flex' }}
-      >
-        <span className="bg-red-700 rounded-lg px-2 py-0.5 text-sm font-bold">
-          {cartCount} {cartCount === 1 ? 'item' : 'items'}
-        </span>
-        <span className="font-bold text-base">View Order</span>
-        <span className="font-bold text-base">₹{cartTotal}</span>
-      </button>
+    <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-jts-cream via-jts-cream/95 to-transparent">
+      <div className="max-w-md mx-auto flex flex-col gap-2">
+        <div
+          className={`rounded-2xl border px-4 py-2.5 shadow-md backdrop-blur-sm ${
+            qualifiesForFreeDelivery
+              ? `border-green-200 bg-green-50 ${showFreeDeliveryCelebration ? 'free-delivery-burst' : ''}`
+              : 'border-amber-200 bg-amber-50'
+          }`}
+        >
+          {qualifiesForFreeDelivery && <div className="free-delivery-spark free-delivery-spark-left" aria-hidden="true" />}
+          {qualifiesForFreeDelivery && <div className="free-delivery-spark free-delivery-spark-right" aria-hidden="true" />}
+          <p className={`text-xs font-bold text-center ${qualifiesForFreeDelivery ? 'text-green-700' : 'text-amber-800'}`}>
+            {freeDeliveryMessage}
+          </p>
+        </div>
+        <button
+          onClick={onViewOrder}
+          className="w-full flex items-center justify-between bg-jts-red hover:bg-jts-crimson active:bg-red-900 text-white rounded-2xl px-5 py-4 shadow-lg transition-colors"
+          style={{ display: 'flex' }}
+        >
+          <span className="bg-red-700 rounded-lg px-2 py-0.5 text-sm font-bold">
+            {cartCount} {cartCount === 1 ? 'item' : 'items'}
+          </span>
+          <span className="font-bold text-base">View Order</span>
+          <span className="font-bold text-base">₹{cartTotal}</span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -111,9 +138,21 @@ function CartBar({ cartCount, cartTotal, onViewOrder }) {
 // ─── MenuPage ─────────────────────────────────────────────────────────────────
 export default function MenuPage() {
   const navigate = useNavigate();
-  const { cart, updateQuantity, registerItem, cartCount, cartTotal, menu, setMenu } = useCart();
+  const {
+    cart,
+    updateQuantity,
+    registerItem,
+    cartCount,
+    cartTotal,
+    qualifiesForFreeDelivery,
+    itemsToFreeDelivery,
+    menu,
+    setMenu,
+  } = useCart();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showFreeDeliveryCelebration, setShowFreeDeliveryCelebration] = useState(false);
+  const previousCartCount = useRef(cartCount);
 
   useEffect(() => {
     if (menu.length > 0) {
@@ -139,11 +178,25 @@ export default function MenuPage() {
     return () => { cancelled = true; };
   }, [menu.length, registerItem, setMenu]);
 
+  useEffect(() => {
+    if (previousCartCount.current < FREE_DELIVERY_THRESHOLD && cartCount >= FREE_DELIVERY_THRESHOLD) {
+      setShowFreeDeliveryCelebration(true);
+      const timeoutId = window.setTimeout(() => setShowFreeDeliveryCelebration(false), 2600);
+      previousCartCount.current = cartCount;
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    previousCartCount.current = cartCount;
+    if (cartCount < FREE_DELIVERY_THRESHOLD) {
+      setShowFreeDeliveryCelebration(false);
+    }
+  }, [cartCount]);
+
   const getQty = (section, itemName) =>
     cart[`${section}::${itemName}`]?.quantity || 0;
 
   return (
-    <div className="min-h-screen bg-jts-lcream" style={{ paddingBottom: cartCount > 0 ? '100px' : '24px' }}>
+    <div className="min-h-screen bg-jts-lcream" style={{ paddingBottom: cartCount > 0 ? '160px' : '24px' }}>
 
       {/* ── Sticky Header ── */}
       <header className="sticky top-0 z-40 bg-white shadow-sm">
@@ -248,6 +301,9 @@ export default function MenuPage() {
       <CartBar
         cartCount={cartCount}
         cartTotal={cartTotal}
+        qualifiesForFreeDelivery={qualifiesForFreeDelivery}
+        itemsToFreeDelivery={itemsToFreeDelivery}
+        showFreeDeliveryCelebration={showFreeDeliveryCelebration}
         onViewOrder={() => navigate('/checkout')}
       />
     </div>
