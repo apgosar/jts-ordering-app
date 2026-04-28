@@ -10,6 +10,53 @@ const STATUS_COLORS = {
 
 const STATUS_FLOW = ['Pending', 'Dispatched', 'Delivered'];
 
+function groupComboSelections(comboSelections = []) {
+  return comboSelections.reduce((groups, selection) => {
+    const normalizedLabel = (selection.slotLabel || selection.slotId || 'Selection').trim();
+    const groupKey = `${selection.slotType}::${normalizedLabel.toLowerCase()}`;
+    const existingGroup = groups.find(group => group.key === groupKey);
+
+    if (existingGroup) {
+      existingGroup.optionNames.push(selection.optionName);
+      return groups;
+    }
+
+    groups.push({
+      key: groupKey,
+      slotType: selection.slotType,
+      label: normalizedLabel,
+      optionNames: [selection.optionName],
+    });
+    return groups;
+  }, []);
+}
+
+function formatComboSelectionsForShare(comboSelections = []) {
+  return groupComboSelections(comboSelections)
+    .map((group) => {
+      const heading = group.slotType === 'free' ? 'Free Pick' : group.label;
+      const suffix = group.slotType === 'free' ? ' [FREE]' : '';
+      const lines = group.optionNames.map(name => `      - ${name}`).join('\n');
+      return `    ${heading}${suffix}\n${lines}`;
+    })
+    .join('\n');
+}
+
+function parseOrderDateTime(date, time) {
+  const [day, month, year] = (date || '').split('/').map(part => parseInt(part, 10));
+  const timeMatch = (time || '').trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?$/i);
+  if (!day || !month || !year || !timeMatch) return 0;
+
+  let hours = parseInt(timeMatch[1], 10);
+  const minutes = parseInt(timeMatch[2], 10);
+  const meridiem = (timeMatch[4] || '').toLowerCase();
+
+  if (meridiem === 'pm' && hours < 12) hours += 12;
+  if (meridiem === 'am' && hours === 12) hours = 0;
+
+  return new Date(year, month - 1, day, hours, minutes, 0, 0).getTime();
+}
+
 // ─── Login screen ──────────────────────────────────────────────────────────────
 function LoginScreen({ onLogin, authError }) {
   const [password, setPassword] = useState('');
@@ -99,9 +146,30 @@ function OrderModal({ order, onClose }) {
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Items</h3>
               <div className="space-y-1.5">
                 {order.items.map((item, i) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span className="text-gray-700">{item.name} <span className="text-gray-400">×{item.quantity}</span></span>
-                    <span className="font-semibold">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                  <div key={i} className="rounded-lg bg-gray-50 px-3 py-2 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <span className="text-gray-700">
+                        {item.name} <span className="text-gray-400">×{item.quantity}</span>
+                      </span>
+                      <span className="font-semibold">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                    </div>
+                    {item.isCombo && Array.isArray(item.comboSelections) && item.comboSelections.length > 0 && (
+                      <div className="mt-2 ml-2 border-l-2 border-amber-200 pl-3 text-[11px] text-amber-900">
+                        {groupComboSelections(item.comboSelections).map(group => (
+                          <div key={group.key} className="mb-1.5 last:mb-0">
+                            <p className="font-semibold">
+                              {group.slotType === 'free' ? 'Free Pick' : group.label}
+                              {group.slotType === 'free' && <span className="ml-1 text-green-700">FREE</span>}
+                            </p>
+                            <ul className="ml-4 list-disc">
+                              {group.optionNames.map((name, idx) => (
+                                <li key={`${group.key}-${idx}`}>{name}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -218,9 +286,8 @@ export default function AdminPage() {
       if (err.response?.status === 401) {
         setAuthError('Incorrect password. Please try again.');
       } else {
-        // Auth succeeded, server error
-        setAdminPassword(pass);
-        setAuthenticated(true);
+        setAuthenticated(false);
+        setAuthError(err.response?.data?.error || 'Unable to sign in right now. Please try again.');
       }
     }
   };
@@ -237,8 +304,8 @@ export default function AdminPage() {
   const sortedOrders = [...orders].sort((a, b) => {
     let valA, valB;
     if (sortField === 'date') {
-      valA = new Date(`${a.date} ${a.time}`);
-      valB = new Date(`${b.date} ${b.time}`);
+      valA = parseOrderDateTime(a.date, a.time);
+      valB = parseOrderDateTime(b.date, b.time);
     } else if (sortField === 'total') {
       valA = a.total;
       valB = b.total;
@@ -291,7 +358,20 @@ export default function AdminPage() {
     if (selected.size === 0) return;
     const selectedOrders = sortedOrders.filter(o => selected.has(o.rowIndex));
     const lines = selectedOrders.map(o => {
-      const itemList = o.items.map(i => `  • ${i.name} ×${i.quantity} = ₹${i.price * i.quantity}`).join('\n');
+      const itemBlocks = o.items.map(i => {
+        const comboDetails = i.isCombo && Array.isArray(i.comboSelections) && i.comboSelections.length > 0
+          ? `\n${formatComboSelectionsForShare(i.comboSelections)}`
+          : '';
+        return `  • ${i.name} ×${i.quantity} = ₹${i.price * i.quantity}${comboDetails}`;
+      });
+
+      const itemList = itemBlocks.map((block, index) => {
+        const item = o.items[index];
+        const previousItem = index > 0 ? o.items[index - 1] : null;
+        const needsSeparator = item?.isCombo && previousItem?.isCombo;
+        return `${needsSeparator ? '    --------------------\n' : ''}${block}`;
+      }).join('\n');
+
       return `🔖 Order: ${o.orderId}
 👤 ${o.name} | 📞 ${o.phone}
 📍 ${o.wingFlat}, ${o.building}, ${o.street}${o.landmark ? ', ' + o.landmark : ''}

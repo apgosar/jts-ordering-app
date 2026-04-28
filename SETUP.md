@@ -39,7 +39,26 @@ npm run install-all
    |----------|------|------|------|-------|-----------|----------|--------|----------|----------|---------|-------|-------|--------|
    | Order ID | Date | Time | Name | Phone | Wing/Flat | Building | Street | Landmark | Locality | PINCODE | Items | Total | Status |
 
-4. Copy the **Spreadsheet ID** from the URL:
+4. Create a third sheet tab and rename it **`Combos`**. Add these headers in row 1:
+
+   | A        | B           | C      | D          | E       | F         | G         | H               | I         |
+   |----------|-------------|--------|------------|---------|-----------|-----------|-----------------|-----------|
+   | Combo ID | Combo Title | Active | Fixed Price| Slot ID | Slot Label| Slot Type | Option Item Key | Sort Order|
+
+   Notes:
+   - `Slot Type` should be `required` for the first 5 pair slots and `free` for the free-pair slot.
+   - `Option Item Key` must match existing menu entries in this format: `Section::Item Name`.
+   - Example `Option Item Key`: `Wafers::Tikhi Wafers`.
+
+   Example rows for one combo (add multiple rows per slot):
+
+   | Combo ID            | Combo Title                 | Active | Fixed Price | Slot ID  | Slot Label | Slot Type | Option Item Key       | Sort Order |
+   |---------------------|-----------------------------|--------|-------------|----------|------------|-----------|-----------------------|------------|
+   | combo_5plus1_offer  | 5 Pair Combo + 1 Free Pair | TRUE   | 499         | pair1    | Pair 1     | required  | Wafers::Tikhi Wafers  | 1          |
+   | combo_5plus1_offer  | 5 Pair Combo + 1 Free Pair | TRUE   | 499         | pair1    | Pair 1     | required  | Wafers::Mari Wafers   | 2          |
+   | combo_5plus1_offer  | 5 Pair Combo + 1 Free Pair | TRUE   | 499         | freepair | Free Pair  | free      | Sweet::Mithi Bundi    | 1          |
+
+5. Copy the **Spreadsheet ID** from the URL:
    `https://docs.google.com/spreadsheets/d/**YOUR_SPREADSHEET_ID**/edit`
 
 ---
@@ -91,6 +110,19 @@ USE_MOCK_DATA=false
 ```
 
 > **Tip:** To test the UI without Google Sheets, set `USE_MOCK_DATA=true`. The app will use built-in sample menu data and store orders in memory.
+
+#### Safe Combos tab bootstrap (non-destructive)
+
+If you only want to create the `Combos` tab and headers without touching any existing `Menu` / `Orders` data, run:
+
+```bash
+npm run sheet:ensure-combos
+```
+
+This command:
+- Creates `Combos` tab only if missing
+- Writes `Combos!A1:I1` headers only if row 1 is empty
+- Never clears any ranges or overwrites existing combo data
 
 ---
 

@@ -110,6 +110,9 @@ async function main() {
     if (!existingTitles.has('Orders')) {
       addRequests.push({ addSheet: { properties: { title: 'Orders' } } });
     }
+    if (!existingTitles.has('Combos')) {
+      addRequests.push({ addSheet: { properties: { title: 'Combos' } } });
+    }
 
     if (addRequests.length > 0) {
       await sheets.spreadsheets.batchUpdate({
@@ -124,6 +127,7 @@ async function main() {
         sheets: [
           { properties: { title: 'Menu' } },
           { properties: { title: 'Orders' } },
+          { properties: { title: 'Combos' } },
         ],
       },
       fields: 'spreadsheetId,spreadsheetUrl',
@@ -166,10 +170,22 @@ async function main() {
     'Status',
   ]];
 
+  const comboHeader = [[
+    'Combo ID',
+    'Combo Title',
+    'Active',
+    'Fixed Price',
+    'Slot ID',
+    'Slot Label',
+    'Slot Type',
+    'Option Item Key',
+    'Sort Order',
+  ]];
+
   await sheets.spreadsheets.values.batchClear({
     spreadsheetId,
     resource: {
-      ranges: ['Menu!A:Z', 'Orders!A:Z'],
+      ranges: ['Menu!A:Z', 'Orders!A:Z', 'Combos!A:Z'],
     },
   });
 
@@ -181,6 +197,7 @@ async function main() {
         { range: 'Menu!A1:F1', values: menuHeader },
         { range: 'Menu!A2:F', values: menuRows },
         { range: 'Orders!A1:N1', values: orderHeader },
+        { range: 'Combos!A1:I1', values: comboHeader },
       ],
     },
   });

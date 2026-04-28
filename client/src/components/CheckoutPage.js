@@ -59,16 +59,68 @@ function QuantityStepper({ quantity, onIncrement, onDecrement }) {
 }
 
 // ─── Order summary row ────────────────────────────────────────────────────────
-function OrderRow({ item, onIncrement, onDecrement }) {
+function OrderRow({ item, onIncrement, onDecrement, onRemove }) {
+  const comboSelections = Array.isArray(item.comboSelections) ? item.comboSelections : [];
+  const groupedSelections = comboSelections.reduce((groups, selection) => {
+    const normalizedLabel = (selection.slotLabel || selection.slotId || 'Selection').trim();
+    const groupKey = `${selection.slotType}::${normalizedLabel.toLowerCase()}`;
+    const existingGroup = groups.find(group => group.key === groupKey);
+
+    if (existingGroup) {
+      existingGroup.optionNames.push(selection.optionName);
+      return groups;
+    }
+
+    groups.push({
+      key: groupKey,
+      slotType: selection.slotType,
+      label: normalizedLabel,
+      optionNames: [selection.optionName],
+    });
+    return groups;
+  }, []);
+
   return (
     <div className="flex items-start justify-between gap-3 text-sm py-3 first:pt-0 last:pb-0">
       <div className="flex-1 min-w-0">
         <span className="font-medium text-gray-800">{item.name}</span>
-        <span className="text-gray-400 text-xs ml-1">({item.section})</span>
-        <p className="text-xs text-gray-500 mt-1">₹{item.price.toLocaleString('en-IN')} each</p>
+        {!item.isCombo && <span className="text-gray-400 text-xs ml-1">({item.section})</span>}
+        <p className="text-xs text-gray-500 mt-1">₹{item.price.toLocaleString('en-IN')} {item.isCombo ? 'combo price' : 'each'}</p>
+        {groupedSelections.length > 0 && (
+          <div className="mt-2 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+            {groupedSelections.map(group => (
+              <div key={group.key} className="mb-1.5 last:mb-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold">
+                    {group.slotType === 'free' ? 'Free Pick' : group.label}
+                  </span>
+                  {group.slotType === 'free' && (
+                    <span className="inline-block bg-green-100 text-green-700 font-semibold px-1.5 py-0.5 rounded text-[10px] leading-none">FREE</span>
+                  )}
+                </div>
+                <ul className="mt-0.5 ml-3 list-disc">
+                  {group.optionNames.map((name, idx) => (
+                    <li key={`${group.key}-${idx}`}>{name}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <div className="flex flex-col items-end gap-2 flex-shrink-0">
-        <QuantityStepper quantity={item.quantity} onIncrement={onIncrement} onDecrement={onDecrement} />
+        {item.isCombo ? (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-xs font-semibold text-red-500 hover:text-red-700 border border-red-200 rounded-lg px-2 py-1 transition"
+            aria-label="Remove combo"
+          >
+            × Remove
+          </button>
+        ) : (
+          <QuantityStepper quantity={item.quantity} onIncrement={onIncrement} onDecrement={onDecrement} />
+        )}
         <span className="font-semibold text-gray-800 min-w-[72px] text-right">
           ₹{(item.price * item.quantity).toLocaleString('en-IN')}
         </span>
@@ -100,6 +152,7 @@ export default function CheckoutPage() {
     qualifiesForFreeDelivery,
     itemsToFreeDelivery,
     updateQuantity,
+    removeFromCart,
     clearCart,
     setLastOrder,
   } = useCart();
@@ -180,7 +233,13 @@ export default function CheckoutPage() {
           locality: form.locality.trim(),
           pincode: form.pincode.trim(),
         },
-        items: cartItems.map(({ name, section, price, quantity }) => ({ name, section, price, quantity })),
+        items: cartItems.map(({ name, section, price, quantity, isCombo, comboId, comboSelections }) => ({
+          name,
+          section,
+          price,
+          quantity,
+          ...(isCombo ? { isCombo: true, comboId: comboId || '', comboSelections: comboSelections || [] } : {}),
+        })),
         total: orderTotal,
       });
 
@@ -209,7 +268,7 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-gray-50 pb-10">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white shadow-sm">
-        <div className="max-w-md mx-auto px-4 py-4 flex items-center gap-3">
+        <div className="max-w-2xl mx-auto w-full px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => navigate('/')}
             className="p-2 rounded-xl hover:bg-gray-100 transition text-gray-600"
@@ -221,7 +280,7 @@ export default function CheckoutPage() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-4 flex flex-col gap-5">
+      <main className="max-w-2xl mx-auto w-full px-4 py-4 flex flex-col gap-5">
         {/* ── Order Summary ── */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center justify-between gap-3 mb-3">
@@ -260,10 +319,11 @@ export default function CheckoutPage() {
           <div className="flex flex-col divide-y divide-gray-100">
             {cartItems.map(item => (
               <OrderRow
-                key={`${item.section}::${item.name}`}
+                key={item.cartKey || `${item.section}::${item.name}`}
                 item={item}
                 onIncrement={() => updateQuantity(item.section, item.name, 1)}
                 onDecrement={() => updateQuantity(item.section, item.name, -1)}
+                onRemove={() => removeFromCart(item.cartKey)}
               />
             ))}
           </div>

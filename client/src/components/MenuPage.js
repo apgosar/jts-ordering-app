@@ -9,6 +9,8 @@ function getSectionId(sectionName) {
   return `menu-section-${sectionName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 }
 
+const COMBO_SECTION_NAME = 'Combo Offers';
+
 // ─── Quantity Stepper ─────────────────────────────────────────────────────────
 function QuantityStepper({ quantity, onIncrement, onDecrement, disableIncrement = false }) {
   return (
@@ -192,6 +194,126 @@ function FloatingSectionMenu({ sections, isOpen, onToggle, onSelect, hasCart }) 
   );
 }
 
+function ComboOfferCard({ combo, cart, onAddCombo }) {
+  const [selectedBySlot, setSelectedBySlot] = useState({});
+  const requiredSlots = combo.slots.filter(slot => slot.slotType === 'required');
+  const freeSlots = combo.slots.filter(slot => slot.slotType === 'free');
+  const hasRequiredSelections = requiredSlots.every(slot => selectedBySlot[slot.slotId]);
+  const hasFreeSelections = freeSlots.every(slot => selectedBySlot[slot.slotId]);
+  const canAdd = combo.available && hasRequiredSelections && hasFreeSelections;
+  const comboQty = Object.values(cart).reduce((count, item) => {
+    if (!item?.isCombo) return count;
+
+    const sameComboId = combo.comboId && item.comboId === combo.comboId;
+    const sameComboTitle = item.section === COMBO_SECTION_NAME && item.name === combo.title;
+    return sameComboId || sameComboTitle ? count + (item.quantity || 0) : count;
+  }, 0);
+  const seenLabels = new Set();
+
+  const onSelectOption = (slotId, optionKey) => {
+    setSelectedBySlot(prev => ({ ...prev, [slotId]: optionKey }));
+  };
+
+  const handleAdd = () => {
+    const selections = combo.slots
+      .filter(slot => selectedBySlot[slot.slotId])
+      .map(slot => {
+        const optionKey = selectedBySlot[slot.slotId];
+        const selectedOption = slot.options.find(option => option.key === optionKey);
+        if (!selectedOption) return null;
+        return {
+          slotId: slot.slotId,
+          slotLabel: slot.label,
+          slotType: slot.slotType,
+          optionKey: selectedOption.key,
+          optionName: selectedOption.name,
+          optionSection: selectedOption.section,
+        };
+      })
+      .filter(Boolean);
+
+    onAddCombo(combo, selections);
+  };
+
+  return (
+    <section className="mb-7 rounded-2xl border border-jts-gold/40 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-jts-red">Promo Combo</p>
+          <h3 className="mt-1 text-base font-bold text-gray-900">{combo.title}</h3>
+          <p className="mt-1 text-xs text-gray-600">Pick 1 item from each of 5 pairs, then 1 from free pair.</p>
+        </div>
+        <div className="rounded-xl bg-jts-cream px-3 py-1.5 text-right">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-jts-navy">Combo Price</p>
+          <p className="text-lg font-extrabold text-jts-red">₹{combo.fixedPrice}</p>
+        </div>
+      </div>
+
+      {!combo.available && (
+        <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+          Combo unavailable. Please ensure each required and free pair has at least one in-stock option.
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3">
+        {combo.slots.map((slot) => (
+          <div key={slot.slotId} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+            {(() => {
+              const slotLabelKey = `${slot.slotType}::${(slot.label || '').trim().toLowerCase()}`;
+              const showLabel = slot.slotType !== 'free' && !seenLabels.has(slotLabelKey);
+              if (slot.slotType !== 'free') {
+                seenLabels.add(slotLabelKey);
+              }
+
+              return (
+            <div className="mb-2 flex items-center gap-2">
+              {slot.slotType === 'free' && (
+                <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-green-700">
+                  free 100gm
+                </span>
+              )}
+              {showLabel && <p className="text-xs font-semibold text-gray-700">{slot.label}</p>}
+            </div>
+              );
+            })()}
+            <div className="flex flex-wrap gap-2">
+              {slot.options.map((option, optionIndex) => {
+                const selected = selectedBySlot[slot.slotId] === option.key;
+                return (
+                  <React.Fragment key={`${slot.slotId}-${option.key}`}>
+                    <button
+                      type="button"
+                      onClick={() => onSelectOption(slot.slotId, option.key)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${selected ? 'border-jts-red bg-red-100 text-jts-red' : 'border-gray-200 bg-white text-gray-700 hover:border-red-300 hover:bg-red-50'}`}
+                    >
+                      {option.name}
+                    </button>
+                    {optionIndex < slot.options.length - 1 && (
+                      <span className="self-center text-xs font-semibold text-gray-400">/</span>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <p className="text-xs font-medium text-gray-600">Added in cart: <span className="font-bold text-jts-red">{comboQty}</span></p>
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={!canAdd}
+          className={`rounded-xl px-4 py-2 text-sm font-bold text-white transition ${canAdd ? 'bg-jts-red hover:bg-jts-crimson active:bg-red-900' : 'cursor-not-allowed bg-gray-300'}`}
+        >
+          Add Combo
+        </button>
+      </div>
+    </section>
+  );
+}
+
 // ─── MenuPage ─────────────────────────────────────────────────────────────────
 export default function MenuPage() {
   const navigate = useNavigate();
@@ -205,12 +327,16 @@ export default function MenuPage() {
     itemsToFreeDelivery,
     menu,
     setMenu,
+    combos,
+    setCombos,
+    addComboToCart,
   } = useCart();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showFreeDeliveryCelebration, setShowFreeDeliveryCelebration] = useState(false);
   const [isSectionMenuOpen, setIsSectionMenuOpen] = useState(false);
   const previousCartCount = useRef(cartCount);
+  const hasComboInCart = Object.values(cart).some(item => item?.isCombo && (item?.quantity || 0) > 0);
 
   useEffect(() => {
     if (menu.length > 0) {
@@ -222,7 +348,9 @@ export default function MenuPage() {
       .then(res => {
         if (cancelled) return;
         const fetchedMenu = res.data.menu || [];
+        const fetchedCombos = res.data.combos || [];
         setMenu(fetchedMenu);
+        setCombos(fetchedCombos);
         fetchedMenu.forEach(({ section, items }) => {
           items.forEach(item => registerItem(section, item));
         });
@@ -234,9 +362,15 @@ export default function MenuPage() {
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [menu.length, registerItem, setMenu]);
+  }, [menu.length, registerItem, setCombos, setMenu]);
 
   useEffect(() => {
+    if (hasComboInCart) {
+      setShowFreeDeliveryCelebration(false);
+      previousCartCount.current = cartCount;
+      return;
+    }
+
     if (previousCartCount.current < FREE_DELIVERY_THRESHOLD && cartCount >= FREE_DELIVERY_THRESHOLD) {
       setShowFreeDeliveryCelebration(true);
       const timeoutId = window.setTimeout(() => setShowFreeDeliveryCelebration(false), 2600);
@@ -248,7 +382,7 @@ export default function MenuPage() {
     if (cartCount < FREE_DELIVERY_THRESHOLD) {
       setShowFreeDeliveryCelebration(false);
     }
-  }, [cartCount]);
+  }, [cartCount, hasComboInCart]);
 
   const getQty = (section, itemName) =>
     cart[`${section}::${itemName}`]?.quantity || 0;
@@ -318,6 +452,19 @@ export default function MenuPage() {
           </div>
         )}
 
+        {!loading && !error && combos.length > 0 && (
+          <div id={getSectionId(COMBO_SECTION_NAME)} className="mb-6 scroll-mt-24">
+            {combos.map(combo => (
+              <ComboOfferCard
+                key={combo.comboId}
+                combo={combo}
+                cart={cart}
+                onAddCombo={addComboToCart}
+              />
+            ))}
+          </div>
+        )}
+
         {!loading && !error && menu.map(({ section, packageInfo, items }) => (
           <section key={section} id={getSectionId(section)} className="mb-7 scroll-mt-24">
             <SectionHeader name={section} packageInfo={packageInfo} count={items.length} />
@@ -358,7 +505,7 @@ export default function MenuPage() {
       </main>
 
       <FloatingSectionMenu
-        sections={menu.map(({ section }) => section)}
+        sections={combos.length > 0 ? [COMBO_SECTION_NAME, ...menu.map(({ section }) => section)] : menu.map(({ section }) => section)}
         isOpen={isSectionMenuOpen}
         onToggle={() => setIsSectionMenuOpen(prev => !prev)}
         onSelect={handleSectionSelect}

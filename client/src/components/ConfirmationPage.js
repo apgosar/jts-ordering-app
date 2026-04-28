@@ -5,7 +5,7 @@ import JtsLogo from './JtsLogo';
 
 export default function ConfirmationPage() {
   const navigate = useNavigate();
-  const { lastOrder } = useCart();
+  const { lastOrder, clearLastOrder } = useCart();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -17,7 +17,10 @@ export default function ConfirmationPage() {
         <JtsLogo className="w-16 h-16" />
         <p className="text-gray-600 font-medium text-center">No order found. Start a new order from the menu!</p>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => {
+            clearLastOrder();
+            navigate('/');
+          }}
           className="mt-2 px-6 py-3 bg-jts-red text-white font-semibold rounded-xl hover:bg-jts-crimson transition"
         >
           Browse Menu
@@ -55,8 +58,8 @@ export default function ConfirmationPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
           <h2 className="font-bold text-gray-800 mb-3">🧾 Order Summary</h2>
           <div className="flex flex-col gap-2 text-sm">
-            {items.map(item => (
-              <div key={`${item.section}::${item.name}`} className="flex justify-between">
+            {items.map((item, idx) => (
+              <div key={item.cartKey || `${item.section}::${item.name}::${idx}`} className="flex justify-between">
                 <span className="text-gray-700">
                   {item.name}
                   <span className="text-gray-400 ml-1">×{item.quantity}</span>
@@ -107,7 +110,10 @@ export default function ConfirmationPage() {
 
         {/* CTA */}
         <button
-          onClick={() => navigate('/')}
+          onClick={() => {
+            clearLastOrder();
+            navigate('/');
+          }}
           className="w-full py-4 bg-jts-red hover:bg-jts-crimson active:bg-red-900 text-white font-bold rounded-2xl text-base transition shadow-md"
         >
           🍱 Start New Order

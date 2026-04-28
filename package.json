@@ -9,7 +9,9 @@
     "build": "cd client && npm run build",
     "postinstall": "cd client && npm install",
     "install-all": "npm install && cd client && npm install",
-    "sheet:init": "node scripts/init-google-sheet.js"
+    "sheet:init": "node scripts/init-google-sheet.js",
+    "sheet:ensure-combos": "node scripts/ensure-combos-sheet.js",
+    "sheet:validate-combos": "node scripts/validate-combos-sheet.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
