@@ -357,12 +357,13 @@ export default function AdminPage() {
   const handleShare = () => {
     if (selected.size === 0) return;
     const selectedOrders = sortedOrders.filter(o => selected.has(o.rowIndex));
-    const lines = selectedOrders.map(o => {
+    const multipleOrders = selectedOrders.length > 1;
+    const lines = selectedOrders.map((o, orderIndex) => {
       const itemBlocks = o.items.map(i => {
         const comboDetails = i.isCombo && Array.isArray(i.comboSelections) && i.comboSelections.length > 0
           ? `\n${formatComboSelectionsForShare(i.comboSelections)}`
           : '';
-        return `  • ${i.name} ×${i.quantity} = ₹${i.price * i.quantity}${comboDetails}`;
+        return `  • ${i.name} ×${i.quantity}${comboDetails}`;
       });
 
       const itemList = itemBlocks.map((block, index) => {
@@ -372,7 +373,11 @@ export default function AdminPage() {
         return `${needsSeparator ? '    --------------------\n' : ''}${block}`;
       }).join('\n');
 
-      return `🔖 Order: ${o.orderId}
+      const orderHeader = multipleOrders
+        ? `🔖 Order ${orderIndex + 1} of ${selectedOrders.length}: ${o.orderId}`
+        : `🔖 Order: ${o.orderId}`;
+
+      return `${orderHeader}
 👤 ${o.name} | 📞 ${o.phone}
 📍 ${o.wingFlat}, ${o.building}, ${o.street}${o.landmark ? ', ' + o.landmark : ''}
    ${o.locality} – ${o.pincode}
