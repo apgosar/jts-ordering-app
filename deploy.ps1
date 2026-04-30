@@ -70,19 +70,7 @@ if ($envPairs.Count -eq 0) {
     Write-Host "Parsed $($envPairs.Count) env var(s) from $ENV_FILE" -ForegroundColor Green
 }
 
-# -- 3. Build React client ----------------------------------------------------
-Write-Host ""
-Write-Host "Building React client..." -ForegroundColor Yellow
-Push-Location client
-try {
-    npm run build
-    if ($LASTEXITCODE -ne 0) { throw "React build failed (exit $LASTEXITCODE)" }
-} finally {
-    Pop-Location
-}
-Write-Host "React build complete." -ForegroundColor Green
-
-# -- 4. Deploy to Cloud Run ---------------------------------------------------
+# -- 3. Deploy to Cloud Run ---------------------------------------------------
 Write-Host ""
 Write-Host "Deploying to Cloud Run..." -ForegroundColor Yellow
 
