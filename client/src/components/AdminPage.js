@@ -357,38 +357,41 @@ export default function AdminPage() {
   const handleShare = () => {
     if (selected.size === 0) return;
     const selectedOrders = sortedOrders.filter(o => selected.has(o.rowIndex));
-    const multipleOrders = selectedOrders.length > 1;
-    const lines = selectedOrders.map((o, orderIndex) => {
-      const itemBlocks = o.items.map(i => {
+    
+    const sectionMap = new Map();
+    
+    selectedOrders.forEach(o => {
+      o.items.forEach(i => {
+        const sectionName = i.section || 'Other';
+        if (!sectionMap.has(sectionName)) {
+          sectionMap.set(sectionName, new Map());
+        }
+        
+        const itemMap = sectionMap.get(sectionName);
+        
         const comboDetails = i.isCombo && Array.isArray(i.comboSelections) && i.comboSelections.length > 0
           ? `\n${formatComboSelectionsForShare(i.comboSelections)}`
           : '';
-        return `  • ${i.name} ×${i.quantity}${comboDetails}`;
+        
+        const key = `${i.name}|${comboDetails}`;
+        if (!itemMap.has(key)) {
+          itemMap.set(key, { name: i.name, comboDetails, quantity: 0 });
+        }
+        itemMap.get(key).quantity += i.quantity;
       });
-
-      const itemList = itemBlocks.map((block, index) => {
-        const item = o.items[index];
-        const previousItem = index > 0 ? o.items[index - 1] : null;
-        const needsSeparator = item?.isCombo && previousItem?.isCombo;
-        return `${needsSeparator ? '    --------------------\n' : ''}${block}`;
-      }).join('\n');
-
-      const orderHeader = multipleOrders
-        ? `🔖 Order ${orderIndex + 1} of ${selectedOrders.length}: ${o.orderId}`
-        : `🔖 Order: ${o.orderId}`;
-
-      return `${orderHeader}
-👤 ${o.name} | 📞 ${o.phone}
-📍 ${o.wingFlat}, ${o.building}, ${o.street}${o.landmark ? ', ' + o.landmark : ''}
-   ${o.locality} – ${o.pincode}
-🕒 ${o.date} ${o.time}
-${itemList}
-💰 Total: ₹${o.total}
-Status: ${o.status}`;
     });
-    const text = lines.join('\n\n──────────────────\n\n');
+
+    const sectionBlocks = Array.from(sectionMap.entries()).map(([sectionName, itemMap]) => {
+      const items = Array.from(itemMap.values()).map(item => {
+        return `- ${item.name} ×${item.quantity}${item.comboDetails}`;
+      });
+      return `${sectionName}:\n${items.join('\n')}`;
+    });
+
+    const text = `📋 Vendor Order Summary\n\n${sectionBlocks.join('\n\n')}`;
+    
     navigator.clipboard.writeText(text).then(
-      () => flash(`📋 ${selected.size} order(s) copied to clipboard!`),
+      () => flash(`📋 Item summary for ${selected.size} order(s) copied!`),
       () => {
         // Fallback: open WhatsApp
         const encoded = encodeURIComponent(text);
