@@ -137,9 +137,7 @@ function OrderModal({ order, onClose }) {
             <section>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Delivery Address</h3>
               <p className="text-sm text-gray-700 leading-relaxed">
-                {order.wingFlat}, {order.building}<br />
-                {order.street}{order.landmark ? `, ${order.landmark}` : ''}<br />
-                {order.locality} – {order.pincode}
+                {order.address}
               </p>
             </section>
             <section>
@@ -211,7 +209,7 @@ function OrderRow({ order, selected, onSelect, onClick }) {
         <p className="text-sm font-semibold text-gray-800 mt-0.5 truncate">{order.name}</p>
         <p className="text-xs text-gray-500">{order.phone}</p>
         <p className="text-xs text-gray-500 truncate mt-0.5">
-          {order.wingFlat}, {order.building}, {order.locality}
+          {order.address}
         </p>
         <div className="flex justify-between items-center mt-1.5">
           <span className="text-xs text-gray-400">{order.date} {order.time}</span>

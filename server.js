@@ -84,6 +84,68 @@ function parseJsonSafe(str, fallback = []) {
   }
 }
 
+function groupComboSelections(comboSelections = []) {
+  return comboSelections.reduce((groups, selection) => {
+    const normalizedLabel = (selection.slotLabel || selection.slotId || 'Selection').trim();
+    const groupKey = `${selection.slotType}::${normalizedLabel.toLowerCase()}`;
+    const existingGroup = groups.find(group => group.key === groupKey);
+
+    if (existingGroup) {
+      existingGroup.optionNames.push(selection.optionName);
+      return groups;
+    }
+
+    groups.push({
+      key: groupKey,
+      slotType: selection.slotType,
+      label: normalizedLabel,
+      optionNames: [selection.optionName],
+    });
+    return groups;
+  }, []);
+}
+
+function formatComboSelectionsForShare(comboSelections = []) {
+  return groupComboSelections(comboSelections)
+    .map((group) => {
+      const heading = group.slotType === 'free' ? 'Free Pick' : group.label;
+      const suffix = group.slotType === 'free' ? ' [FREE]' : '';
+      const lines = group.optionNames.map(name => `      - ${name}`).join('\n');
+      return `    ${heading}${suffix}\n${lines}`;
+    })
+    .join('\n');
+}
+
+function formatItemsForSheet(canonicalItems) {
+  const sectionMap = new Map();
+  canonicalItems.forEach(i => {
+    const sectionName = i.section || 'Other';
+    if (!sectionMap.has(sectionName)) {
+      sectionMap.set(sectionName, new Map());
+    }
+    
+    const itemMap = sectionMap.get(sectionName);
+    const comboDetails = i.isCombo && Array.isArray(i.comboSelections) && i.comboSelections.length > 0
+      ? `\n${formatComboSelectionsForShare(i.comboSelections)}`
+      : '';
+    
+    const key = `${i.name}|${comboDetails}`;
+    if (!itemMap.has(key)) {
+      itemMap.set(key, { name: i.name, comboDetails, quantity: 0 });
+    }
+    itemMap.get(key).quantity += i.quantity;
+  });
+
+  const sectionBlocks = Array.from(sectionMap.entries()).map(([sectionName, itemMap]) => {
+    const items = Array.from(itemMap.values()).map(item => {
+      return `- ${item.name} ×${item.quantity}${item.comboDetails}`;
+    });
+    return `${sectionName}:\n${items.join('\n')}`;
+  });
+
+  return sectionBlocks.join('\n\n');
+}
+
 function toMenuItemKey(section, name) {
   return `${(section || '').trim()}::${(name || '').trim()}`.toLowerCase();
 }
@@ -481,23 +543,22 @@ app.post('/api/orders', orderLimiter, async (req, res) => {
     const date = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
+    const formattedAddress = `${customer.wingFlat.trim()}, ${customer.building.trim()}, ${customer.street.trim()}${customer.landmark ? ', ' + customer.landmark.trim() : ''}, ${customer.locality.trim()} - ${customer.pincode.trim()}`;
+    const formattedItemsString = formatItemsForSheet(canonicalItems);
+
     if (USE_MOCK) {
       MOCK_ORDERS.push({
         rowIndex: MOCK_ORDERS.length + 2,
         orderId,
         date,
         time,
+        status: 'Pending',
         name: customer.name.trim(),
         phone: customer.phone.trim(),
-        wingFlat: customer.wingFlat.trim(),
-        building: customer.building.trim(),
-        street: customer.street.trim(),
-        landmark: (customer.landmark || '').trim(),
-        locality: customer.locality.trim(),
-        pincode: customer.pincode.trim(),
-        items: canonicalItems,
+        address: formattedAddress,
+        itemsFormatted: formattedItemsString,
         total: canonicalTotal,
-        status: 'Pending',
+        items: canonicalItems,
       });
       return res.json({ success: true, orderId });
     }
@@ -507,22 +568,18 @@ app.post('/api/orders', orderLimiter, async (req, res) => {
       orderId,
       date,
       time,
+      'Pending',
       customer.name.trim(),
       customer.phone.trim(),
-      customer.wingFlat.trim(),
-      customer.building.trim(),
-      customer.street.trim(),
-      (customer.landmark || '').trim(),
-      customer.locality.trim(),
-      customer.pincode.trim(),
-      JSON.stringify(canonicalItems),
+      formattedAddress,
+      formattedItemsString,
       canonicalTotal,
-      'Pending',
+      JSON.stringify(canonicalItems),
     ];
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Orders!A:N',
+      range: 'Orders!A:J',
       valueInputOption: 'USER_ENTERED',
       resource: { values: [row] },
     });
@@ -555,7 +612,7 @@ app.get('/api/admin/orders', adminLimiter, (req, res) => {
       const sheets = getSheetsClient();
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: 'Orders!A2:N',
+        range: 'Orders!A2:J',
       });
 
       const rows = response.data.values || [];
@@ -564,17 +621,13 @@ app.get('/api/admin/orders', adminLimiter, (req, res) => {
         orderId: row[0] || '',
         date: row[1] || '',
         time: row[2] || '',
-        name: row[3] || '',
-        phone: row[4] || '',
-        wingFlat: row[5] || '',
-        building: row[6] || '',
-        street: row[7] || '',
-        landmark: row[8] || '',
-        locality: row[9] || '',
-        pincode: row[10] || '',
-        items: parseJsonSafe(row[11]),
-        total: parseFloat(row[12]) || 0,
-        status: row[13] || 'Pending',
+        status: row[3] || 'Pending',
+        name: row[4] || '',
+        phone: row[5] || '',
+        address: row[6] || '',
+        itemsFormatted: row[7] || '',
+        total: parseFloat(row[8]) || 0,
+        items: parseJsonSafe(row[9]),
       }));
 
       if (date) orders = orders.filter(o => o.date === date);
@@ -617,7 +670,7 @@ app.put('/api/admin/orders/status', adminLimiter, async (req, res) => {
   try {
     const sheets = getSheetsClient();
     const data = rowIndices.map(rowIndex => ({
-      range: `Orders!N${rowIndex}`,
+      range: `Orders!D${rowIndex}`,
       values: [[status]],
     }));
 
