@@ -8,6 +8,9 @@ export const getMenu = () => axios.get(`${API_BASE}/api/menu`);
 /** Place a new order */
 export const placeOrder = (payload) => axios.post(`${API_BASE}/api/orders`, payload);
 
+/** Fetch customer details by phone number */
+export const getCustomerDetails = (phone) => axios.get(`${API_BASE}/api/customer/details`, { params: { phone } });
+
 /** Fetch all orders (admin only) */
 export const getAdminOrders = (filters = {}, adminPassword) =>
   axios.get(`${API_BASE}/api/admin/orders`, {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../App';
-import { placeOrder } from '../services/api';
+import { placeOrder, getCustomerDetails } from '../services/api';
 
 // ─── Input field ──────────────────────────────────────────────────────────────
 function Field({ label, id, required, error, children }) {
@@ -162,6 +162,10 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
 
+  const [phoneLookupState, setPhoneLookupState] = useState('initial'); // 'initial', 'loading', 'done'
+  const [suggestedAddresses, setSuggestedAddresses] = useState([]);
+  const [selectedAddressIndex, setSelectedAddressIndex] = useState(-1);
+
   const freeDeliveryMessage = qualifiesForFreeDelivery
     ? 'YAY! You have qualified for free delivery!'
     : `Add ${itemsToFreeDelivery} more ${itemsToFreeDelivery === 1 ? 'item' : 'items'} to qualify for free delivery.`;
@@ -182,6 +186,37 @@ export default function CheckoutPage() {
     );
   }
 
+  const handlePhoneChange = async (e) => {
+    const val = e.target.value;
+    setForm(prev => ({ ...prev, phone: val }));
+    if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
+
+    if (/^[6-9]\d{9}$/.test(val)) {
+      setPhoneLookupState('loading');
+      try {
+        const res = await getCustomerDetails(val);
+        const details = res.data.details || [];
+        setSuggestedAddresses(details);
+        if (details.length > 0) {
+          setForm(prev => ({ ...prev, name: details[0].name }));
+          setSelectedAddressIndex(0);
+        } else {
+          setSelectedAddressIndex(-1);
+        }
+      } catch (err) {
+        console.error('Failed to lookup phone', err);
+        setSuggestedAddresses([]);
+        setSelectedAddressIndex(-1);
+      } finally {
+        setPhoneLookupState('done');
+      }
+    } else {
+      setPhoneLookupState('initial');
+      setSuggestedAddresses([]);
+      setSelectedAddressIndex(-1);
+    }
+  };
+
   const handleChange = (field) => (e) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
@@ -195,14 +230,17 @@ export default function CheckoutPage() {
     } else if (!/^[6-9]\d{9}$/.test(form.phone.trim())) {
       e.phone = 'Enter a valid 10-digit Indian mobile number (starting with 6–9)';
     }
-    if (!form.wingFlat.trim()) e.wingFlat = 'Wing / Flat No is required';
-    if (!form.building.trim()) e.building = 'Building Name is required';
-    if (!form.street.trim()) e.street = 'Street Name is required';
-    if (!form.locality.trim()) e.locality = 'Locality is required';
-    if (!form.pincode.trim()) {
-      e.pincode = 'PINCODE is required';
-    } else if (!/^\d{6}$/.test(form.pincode.trim())) {
-      e.pincode = 'Enter a valid 6-digit PINCODE';
+    
+    if (selectedAddressIndex === -1) {
+      if (!form.wingFlat.trim()) e.wingFlat = 'Wing / Flat No is required';
+      if (!form.building.trim()) e.building = 'Building Name is required';
+      if (!form.street.trim()) e.street = 'Street Name is required';
+      if (!form.locality.trim()) e.locality = 'Locality is required';
+      if (!form.pincode.trim()) {
+        e.pincode = 'PINCODE is required';
+      } else if (!/^\d{6}$/.test(form.pincode.trim())) {
+        e.pincode = 'Enter a valid 6-digit PINCODE';
+      }
     }
     return e;
   };
@@ -222,17 +260,24 @@ export default function CheckoutPage() {
     setSubmitting(true);
     setServerError('');
     try {
+      const customerData = {
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+      };
+
+      if (selectedAddressIndex >= 0) {
+        customerData.fullAddress = suggestedAddresses[selectedAddressIndex].address;
+      } else {
+        customerData.wingFlat = form.wingFlat.trim();
+        customerData.building = form.building.trim();
+        customerData.street = form.street.trim();
+        customerData.landmark = form.landmark.trim();
+        customerData.locality = form.locality.trim();
+        customerData.pincode = form.pincode.trim();
+      }
+
       const res = await placeOrder({
-        customer: {
-          name: form.name.trim(),
-          phone: form.phone.trim(),
-          wingFlat: form.wingFlat.trim(),
-          building: form.building.trim(),
-          street: form.street.trim(),
-          landmark: form.landmark.trim(),
-          locality: form.locality.trim(),
-          pincode: form.pincode.trim(),
-        },
+        customer: customerData,
         items: cartItems.map(({ name, section, price, quantity, isCombo, comboId, comboSelections }) => ({
           name,
           section,
@@ -358,20 +403,11 @@ export default function CheckoutPage() {
             <span>👤</span> Your Details
           </h2>
 
-          <Field label="Full Name" id="name" required error={errors.name}>
-            <TextInput
-              id="name"
-              value={form.name}
-              onChange={handleChange('name')}
-              placeholder="e.g. Raj Mehta"
-            />
-          </Field>
-
           <Field label="Phone Number" id="phone" required error={errors.phone}>
             <TextInput
               id="phone"
               value={form.phone}
-              onChange={handleChange('phone')}
+              onChange={handlePhoneChange}
               placeholder="10-digit mobile number"
               type="tel"
               inputMode="tel"
@@ -379,11 +415,57 @@ export default function CheckoutPage() {
             />
           </Field>
 
-          <div className="border-t border-gray-100 pt-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <span>📍</span> Delivery Address
-            </h3>
-            <div className="flex flex-col gap-3">
+          {phoneLookupState === 'loading' && (
+            <p className="text-sm text-gray-500 font-medium px-1">Searching for previous addresses...</p>
+          )}
+
+          {phoneLookupState === 'done' && (
+            <>
+              {suggestedAddresses.length > 0 && (
+                <div className="flex flex-col gap-3 mb-2">
+                  <h3 className="text-sm font-semibold text-gray-700">Select an address for delivery:</h3>
+                  {suggestedAddresses.map((addr, idx) => (
+                    <label key={idx} className={`p-3 rounded-xl border flex items-start gap-3 cursor-pointer transition ${selectedAddressIndex === idx ? 'bg-red-50 border-jts-red' : 'bg-white border-gray-200'}`}>
+                      <input 
+                        type="radio" 
+                        name="addressSelection" 
+                        checked={selectedAddressIndex === idx} 
+                        onChange={() => setSelectedAddressIndex(idx)} 
+                        className="mt-1"
+                      />
+                      <div className="text-sm">
+                        <p className="font-semibold text-gray-800">{addr.name}</p>
+                        <p className="text-gray-600 mt-0.5">{addr.address}</p>
+                      </div>
+                    </label>
+                  ))}
+                  <label className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition ${selectedAddressIndex === -1 ? 'bg-red-50 border-jts-red' : 'bg-white border-gray-200'}`}>
+                    <input 
+                      type="radio" 
+                      name="addressSelection" 
+                      checked={selectedAddressIndex === -1} 
+                      onChange={() => setSelectedAddressIndex(-1)} 
+                    />
+                    <span className="text-sm font-semibold text-gray-800">Enter a new address</span>
+                  </label>
+                </div>
+              )}
+
+              <Field label="Full Name" id="name" required error={errors.name}>
+                <TextInput
+                  id="name"
+                  value={form.name}
+                  onChange={handleChange('name')}
+                  placeholder="e.g. Raj Mehta"
+                />
+              </Field>
+
+              {selectedAddressIndex === -1 && (
+                <div className="border-t border-gray-100 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <span>📍</span> Delivery Address
+                  </h3>
+                  <div className="flex flex-col gap-3">
               <Field label="Wing / Flat No" id="wingFlat" required error={errors.wingFlat}>
                 <TextInput
                   id="wingFlat"
@@ -441,6 +523,9 @@ export default function CheckoutPage() {
               </Field>
             </div>
           </div>
+              )}
+            </>
+          )}
 
           {serverError && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">

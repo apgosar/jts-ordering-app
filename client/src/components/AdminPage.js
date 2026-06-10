@@ -170,6 +170,20 @@ function OrderModal({ order, onClose }) {
                     )}
                   </div>
                 ))}
+                
+                {(() => {
+                  const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                  const deliveryCharge = order.total - subtotal;
+                  if (deliveryCharge > 0) {
+                    return (
+                      <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm flex justify-between gap-3">
+                        <span className="text-gray-700">Delivery Charge</span>
+                        <span className="font-semibold">₹{deliveryCharge.toLocaleString('en-IN')}</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
               <div className="border-t border-gray-100 mt-2 pt-2 flex justify-between font-bold text-sm">
                 <span>Total</span>
@@ -231,8 +245,12 @@ export default function AdminPage() {
   const [error, setError] = useState('');
 
   // Filters
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  
   const [filterDate, setFilterDate] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterMonth, setFilterMonth] = useState(currentMonthStr);
+  const [filterStatus, setFilterStatus] = useState('Pending');
   const [sortField, setSortField] = useState('date');
   const [sortDir, setSortDir] = useState('desc');
 
@@ -250,13 +268,19 @@ export default function AdminPage() {
     return `${day}/${month}/${year}`;
   };
 
+  const convertMonthFormat = (monthStr) => {
+    if (!monthStr) return undefined;
+    const [year, month] = monthStr.split('-');
+    return `${month}/${year}`;
+  };
+
   const fetchOrders = useCallback(async (pass) => {
     setLoading(true);
     setError('');
     try {
-      const formattedDate = convertDateFormat(filterDate);
+      const formattedMonth = convertMonthFormat(filterMonth);
       const res = await getAdminOrders(
-        { date: formattedDate || undefined, status: filterStatus || undefined },
+        { month: formattedMonth || undefined },
         pass || adminPassword
       );
       setOrders(res.data.orders || []);
@@ -271,7 +295,7 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterDate, filterStatus, adminPassword]);
+  }, [filterMonth, adminPassword]);
 
   const handleLogin = async (pass) => {
     setAuthError('');
@@ -292,14 +316,20 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (authenticated) fetchOrders();
-  }, [authenticated, filterDate, filterStatus, fetchOrders]);
+  }, [authenticated, filterMonth, fetchOrders]);
 
   if (!authenticated) {
     return <LoginScreen onLogin={handleLogin} authError={authError} />;
   }
 
-  // ── Sort ──
-  const sortedOrders = [...orders].sort((a, b) => {
+  // ── Sort & Filter ──
+  const filteredOrders = orders.filter(o => {
+    if (filterDate && o.date !== convertDateFormat(filterDate)) return false;
+    if (filterStatus && o.status !== filterStatus) return false;
+    return true;
+  });
+
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
     let valA, valB;
     if (sortField === 'date') {
       valA = parseOrderDateTime(a.date, a.time);
@@ -398,8 +428,8 @@ export default function AdminPage() {
     );
   };
 
-  const totalRevenue = sortedOrders.reduce((s, o) => s + o.total, 0);
-  const pendingCount = sortedOrders.filter(o => o.status === 'Pending').length;
+  const totalRevenue = orders.reduce((s, o) => s + o.total, 0);
+  const pendingCount = orders.filter(o => o.status === 'Pending').length;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
@@ -444,11 +474,20 @@ export default function AdminPage() {
         {/* Filters */}
         <div className="bg-white rounded-xl border border-gray-100 p-3 flex flex-wrap gap-3">
           <div className="flex-1 min-w-[140px]">
+            <label className="text-xs font-medium text-gray-600 block mb-1">Filter by Month</label>
+            <input
+              type="month"
+              value={filterMonth}
+              onChange={e => { setFilterMonth(e.target.value); setFilterDate(''); }}
+              className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jts-red transition"
+            />
+          </div>
+          <div className="flex-1 min-w-[140px]">
             <label className="text-xs font-medium text-gray-600 block mb-1">Filter by Date</label>
             <input
               type="date"
               value={filterDate}
-              onChange={e => setFilterDate(e.target.value)}
+              onChange={e => { setFilterDate(e.target.value); setFilterMonth(''); }}
               className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jts-red transition"
             />
           </div>
@@ -484,7 +523,7 @@ export default function AdminPage() {
           </div>
           <div className="flex items-end">
             <button
-              onClick={() => { setFilterDate(''); setFilterStatus(''); }}
+              onClick={() => { setFilterDate(''); setFilterMonth(''); setFilterStatus(''); }}
               className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
             >
               Clear Filters

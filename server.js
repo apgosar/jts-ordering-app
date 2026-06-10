@@ -501,6 +501,49 @@ app.get('/api/menu', async (req, res) => {
   }
 });
 
+// GET /api/customer/details
+app.get('/api/customer/details', async (req, res) => {
+  const { phone } = req.query;
+  if (!phone || typeof phone !== 'string' || !phone.trim()) {
+    return res.status(400).json({ error: 'Missing phone parameter' });
+  }
+
+  const queryPhone = phone.trim();
+
+  try {
+    let rows = [];
+    if (USE_MOCK) {
+      rows = MOCK_ORDERS.map(o => [o.orderId, o.date, o.time, o.status, o.name, o.phone, o.address]);
+    } else {
+      const sheets = getSheetsClient();
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Orders!A2:G',
+      });
+      rows = response.data.values || [];
+    }
+
+    const uniqueAddresses = new Map();
+    rows.forEach(row => {
+      const rowName = (row[4] || '').trim();
+      const rowPhone = (row[5] || '').trim();
+      const rowAddress = (row[6] || '').trim();
+
+      if (rowPhone === queryPhone && rowName && rowAddress) {
+        const key = `${rowName}::${rowAddress}`.toLowerCase();
+        if (!uniqueAddresses.has(key)) {
+          uniqueAddresses.set(key, { name: rowName, address: rowAddress });
+        }
+      }
+    });
+
+    res.json({ details: Array.from(uniqueAddresses.values()) });
+  } catch (err) {
+    console.error('Error fetching customer details:', err.message);
+    res.status(500).json({ error: 'Failed to fetch customer details.' });
+  }
+});
+
 // POST /api/orders
 app.post('/api/orders', orderLimiter, async (req, res) => {
   const { customer, items, total } = req.body;
@@ -511,7 +554,12 @@ app.post('/api/orders', orderLimiter, async (req, res) => {
   }
 
   // Validate customer fields
-  const requiredCustomerFields = ['name', 'phone', 'wingFlat', 'building', 'street', 'locality', 'pincode'];
+  const hasFullAddress = customer.fullAddress && typeof customer.fullAddress === 'string' && customer.fullAddress.trim();
+  const requiredCustomerFields = ['name', 'phone'];
+  if (!hasFullAddress) {
+    requiredCustomerFields.push('wingFlat', 'building', 'street', 'locality', 'pincode');
+  }
+
   for (const field of requiredCustomerFields) {
     if (!customer[field] || typeof customer[field] !== 'string' || !customer[field].trim()) {
       return res.status(400).json({ error: `Missing or invalid customer field: ${field}` });
@@ -543,7 +591,9 @@ app.post('/api/orders', orderLimiter, async (req, res) => {
     const date = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-    const formattedAddress = `${customer.wingFlat.trim()}, ${customer.building.trim()}, ${customer.street.trim()}${customer.landmark ? ', ' + customer.landmark.trim() : ''}, ${customer.locality.trim()} - ${customer.pincode.trim()}`;
+    const formattedAddress = hasFullAddress 
+      ? customer.fullAddress.trim() 
+      : `${customer.wingFlat.trim()}, ${customer.building.trim()}, ${customer.street.trim()}${customer.landmark ? ', ' + customer.landmark.trim() : ''}, ${customer.locality.trim()} - ${customer.pincode.trim()}`;
     const formattedItemsString = formatItemsForSheet(canonicalItems);
 
     if (USE_MOCK) {
@@ -598,11 +648,12 @@ app.get('/api/admin/orders', adminLimiter, (req, res) => {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { date, status } = req.query;
+  const { date, month, status } = req.query;
 
   if (USE_MOCK) {
     let orders = [...MOCK_ORDERS];
     if (date) orders = orders.filter(o => o.date === date);
+    if (month) orders = orders.filter(o => (o.date || '').endsWith(month));
     if (status) orders = orders.filter(o => o.status === status);
     return res.json({ orders });
   }
@@ -631,6 +682,7 @@ app.get('/api/admin/orders', adminLimiter, (req, res) => {
       }));
 
       if (date) orders = orders.filter(o => o.date === date);
+      if (month) orders = orders.filter(o => (o.date || '').endsWith(month));
       if (status) orders = orders.filter(o => o.status === status);
 
       res.json({ orders });
