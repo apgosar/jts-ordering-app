@@ -10,6 +10,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Trust the first proxy hop (Cloud Run / GCP load balancer sets X-Forwarded-For)
+app.set('trust proxy', 1);
+
 const FREE_DELIVERY_THRESHOLD = 5;
 const DELIVERY_CHARGE = 30;
 
