@@ -1,7 +1,52 @@
+# ── Dependencies ──────────────────────────────────────────────────────────────
 node_modules/
-.env
-*.log
 client/node_modules/
+
+# ── Build output ──────────────────────────────────────────────────────────────
 client/build/
+
+# ── Environment / Secrets (NEVER commit these) ────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── OS files ──────────────────────────────────────────────────────────────────
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor / IDE ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ── Google service account keys (extra safety net) ────────────────────────────
+*.json
+!package.json
+!package-lock.json
+!client/package.json
+!client/package-lock.json
+
+# ── Diagnostic / scratch scripts ──────────────────────────────────────────────
+scripts/diagnose-*.js
+
+# ── Deployment script output / gcloud temp files ──────────────────────────────
+env.yaml
+.gcloudignore
+
+# ── Test and coverage output ──────────────────────────────────────────────────
+coverage/
+playwright-report/
+test-results/
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
 *.pem

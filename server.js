@@ -5,10 +5,18 @@ const path = require('path');
 const { google } = require('googleapis');
 const { v4: uuidv4 } = require('uuid');
 const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// HTTP security headers (production only; skip in dev to avoid CSP issues with CRA)
+if (process.env.NODE_ENV === 'production') {
+  app.use(helmet({
+    contentSecurityPolicy: false, // CRA sets its own; re-enable and tune if needed
+  }));
+}
 
 // Trust the first proxy hop (Cloud Run / GCP load balancer sets X-Forwarded-For)
 app.set('trust proxy', 1);
