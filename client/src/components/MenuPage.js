@@ -500,6 +500,13 @@ export default function MenuPage() {
               <span className="block">🛵 Free delivery on orders above 5 packets</span>
               <span className="block mt-0.5">₹30 charge for below 5 packets</span>
             </p>
+            
+            <div className="mt-3 pt-3 border-t border-white/10 text-[11px] text-white/85 space-y-1 leading-relaxed">
+              <p>Call time: 10 AM – 10 PM</p>
+              <p>💳 Send payment screenshot if paying online</p>
+              <p>❗ Kindly avoid repeated calls – will call back!</p>
+              <p>✉️ Msg if urgent</p>
+            </div>
           </div>
         )}
       </main>
